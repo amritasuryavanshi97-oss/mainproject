@@ -115,9 +115,10 @@ public class aicteactivity {
                 }
                 data.timestamps.add(Instant.now().toString());
                 data.checkins++;
-                saveData();
-                send(ex, 200, "{\"status\":\"success\",\"message\":\"Check-in recorded successfully.\"}");
             }
+            // Save and reply outside the student lock so two locks are never held in opposite order
+            saveData();
+            send(ex, 200, "{\"status\":\"success\",\"message\":\"Check-in recorded successfully.\"}");
         } finally { ex.close(); }
     }
 
