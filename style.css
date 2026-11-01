@@ -8,3 +8,107 @@
 @media(max-width:1100px){.content-area{padding:24px}.topbar{padding:18px 24px}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.activities-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.app-shell{grid-template-columns:205px minmax(0,1fr)}.sidebar{padding-inline:12px}.banner-illustration{width:180px}.welcome-banner{padding:25px}.dashboard-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.login-shell{margin:12px auto;grid-template-columns:1fr;padding:8px;border-radius:22px}.login-art{min-height:300px;padding:24px}.login-art .brand{font-size:18px}.art-pill{margin-top:32px}.login-art h1{font-size:36px;margin:14px 0 10px}.login-art>p{font-size:12px;max-width:260px}.art-shapes{left:auto;right:15px;bottom:10px;width:160px;height:100px;opacity:.9}.art-card{left:12px;top:10px;width:140px;padding:10px}.art-card strong{font-size:22px}.art-card small,.art-card span{font-size:7px}.shape-orange{left:0;top:0;width:42px;height:42px;font-size:22px}.shape-blue{right:0;top:0;width:38px;height:38px;font-size:20px}.shape-pink{right:0;bottom:0;width:34px;height:34px;font-size:20px}.art-footer{display:none}.login-panel{padding:25px 19px}.login-panel h2{font-size:25px}.app-shell{display:block}.sidebar{position:sticky;z-index:50;top:0;height:auto;padding:10px 12px;border-right:0;border-bottom:1px solid var(--line);display:block}.side-brand{padding:0 4px 10px;font-size:17px}.side-brand .brand-mark{width:29px;height:29px}.side-label,.sidebar-bottom,.side-help{display:none}.sidebar nav{display:flex;overflow:auto;gap:5px;padding-bottom:2px}.nav-item{width:auto;white-space:nowrap;flex-shrink:0;padding:9px 10px;font-size:10px;gap:6px}.nav-item>span{font-size:14px;width:auto}.topbar{height:auto;padding:17px 16px}.topbar h1{font-size:19px}.breadcrumb{font-size:8px}.profile{gap:7px}.profile>div:last-child{display:none}.top-actions{gap:10px}.content-area{padding:17px 13px 25px}.welcome-banner{min-height:220px;padding:20px}.welcome-copy{max-width:72%}.welcome-banner h2{font-size:20px}.welcome-banner p{font-size:11px}.banner-illustration{position:absolute;right:0;bottom:0;width:125px;height:140px;opacity:.85}.sun{width:70px;height:70px;right:20px;top:5px}.plant-pot{font-size:62px;right:26px}.note-one{left:0;top:40px;font-size:8px}.note-two{right:6px;bottom:8px;font-size:7px}.banner-squiggle{display:none}.section-heading{align-items:flex-start}.section-heading h2{font-size:16px}.tiny-tag{font-size:8px;padding:7px}.stats-grid{gap:9px}.stat-card{padding:13px}.stat-top{font-size:10px}.stat-icon{width:25px;height:25px}.stat-number{margin:10px 0}.stat-number strong{font-size:26px}.stat-foot{font-size:9px}.dashboard-grid,.lower-grid,.manage-grid{grid-template-columns:1fr}.panel{padding:16px}.activities-grid{grid-template-columns:1fr}.activity-card{display:grid;grid-template-columns:95px 1fr}.activity-cover{height:100%;min-height:155px;display:grid;align-content:space-between}.activity-body{padding:14px}.activity-body p{min-height:0}.page-intro{align-items:flex-start}.page-intro h2{font-size:20px}.filter-chip{white-space:nowrap}.scan-controls{grid-template-columns:1fr}.form-two{gap:9px}.form-two input{padding:10px 8px}.table-tools{align-items:flex-start;flex-direction:column}.table-tools input{max-width:none;width:100%}.approval-row{align-items:flex-start;flex-direction:column}.app-footer{padding:0 15px 20px;font-size:9px}.map-panel #map{height:230px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* =====================================================================
+   ACADEMIC MODULES (attendance, timetable, register, syllabus, to-do, deadlines)
+   ===================================================================== */
+.ctrl{padding:11px 12px;border:1px solid #e5e5f0;background:#fbfbfe;border-radius:11px;color:var(--ink);min-width:0}
+.ctrl-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hint{color:var(--muted);font-size:11px;margin:12px 0 0;line-height:1.6}
+.small-btn{padding:9px 12px;font-size:11px}
+.overdue{color:#c64a64!important;font-weight:700}
+
+/* status badge + message */
+.ac-badge{display:inline-block;margin-top:8px;padding:8px 13px;border-radius:30px;font-weight:800;font-size:12px}
+.ac-good{background:#def7eb;color:#24855f}
+.ac-warn{background:#fff0bd;color:#8e6a13}
+.ac-bad{background:#ffe3e8;color:#c64a64}
+.ac-neutral{background:#eeeaff;color:#5f4ad8}
+.callout{margin:15px 0 0;padding:15px 18px;line-height:1.7;background:#f7f6ff;border:1px dashed #d6cffc}
+
+/* tags */
+.tag{display:inline-block;margin:5px 5px 0 0;padding:4px 8px;border-radius:7px;font-size:10px;font-weight:800}
+.tag-good{background:#def7eb;color:#24855f}
+.tag-warn{background:#fff0bd;color:#8e6a13}
+.tag-bad{background:#ffe3e8;color:#c64a64}
+
+/* progress bars */
+.bar{height:8px;min-width:70px;background:#f0eef9;border-radius:20px;overflow:hidden;margin-bottom:4px}
+.bar>i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--purple),var(--pink))}
+.bar.good>i{background:linear-gradient(90deg,#4cc49a,#7edfc1)}
+.bar.bad>i{background:linear-gradient(90deg,#ff8a9e,#ff936b)}
+
+/* data tables */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{padding:11px 14px;text-align:left;font-size:9px;letter-spacing:1px;color:#9a98b3;background:#fbfaff;border-bottom:1px solid var(--line)}
+.data-table td{padding:12px 14px;border-bottom:1px solid #f1f0f8;font-size:12px;vertical-align:middle}
+.data-table small{color:var(--muted)}
+
+/* lecture log (student) */
+.lecture-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px;margin-bottom:9px;background:#fbfaff;border:1px solid #efedf7;border-radius:12px;flex-wrap:wrap}
+.lecture-info strong,.lecture-info small{display:block}
+.lecture-info small{color:var(--muted);margin-top:3px}
+.seg{display:inline-flex;gap:5px}
+.seg-btn{border:1px solid #e5e5f0;background:#fff;color:#6b6e86;padding:7px 10px;border-radius:9px;font-size:10px;font-weight:800}
+.seg-btn:disabled{opacity:.5;cursor:not-allowed}
+.seg-btn.att.on{background:#def7eb;color:#24855f;border-color:#bfe9d6}
+.seg-btn.bun.on{background:#ffe3e8;color:#c64a64;border-color:#f6c6d0}
+.seg-btn.can.on{background:#eeeaff;color:#5f4ad8;border-color:#d6cffc}
+
+/* timetable */
+.tt-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.tt-day{background:#fbfaff;border:1px solid #efedf7;border-radius:14px;padding:10px;min-width:0}
+.tt-day h4{margin:0 0 9px;font:800 12px 'Plus Jakarta Sans',sans-serif;color:#5f4ad8;letter-spacing:.6px}
+.tt-slot{background:#fff;border:1px solid #ece9f8;border-radius:11px;padding:9px 10px;margin-bottom:8px}
+.tt-slot b{display:block;font-size:10px;color:#8883aa;margin-bottom:3px}
+.tt-slot strong{display:block;font-size:12px;line-height:1.3}
+.tt-slot small{display:block;color:var(--muted);font-size:10px;margin:3px 0 6px}
+.tt-empty{font-size:11px;margin:0}
+#tt-faculty-tools{margin-bottom:17px}
+
+/* faculty register (spreadsheet look) */
+.register-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.counters{display:flex;gap:10px;flex-wrap:wrap}
+.counter{padding:9px 14px;background:#f7f6ff;border:1px solid #e8e4ff;border-radius:11px;font-size:11px;color:#6a62a6;font-weight:700}
+.counter b{display:block;font:800 19px 'Plus Jakarta Sans',sans-serif;color:var(--ink)}
+.sheet{border:1px solid #e3e1ef}
+.sheet th,.sheet td{border-right:1px solid #eeecf6}
+.sheet th{position:sticky;top:0;background:#f3f1fb;color:#6a62a6}
+.sheet tbody tr:nth-child(even){background:#fcfbff}
+.sheet tbody tr:hover{background:#f6f4ff}
+.rownum{width:42px;text-align:center;color:#a09eb5;background:#f8f7fd}
+.own-log{color:var(--muted)}
+.cell{width:92px;border:0;border-radius:8px;padding:8px 6px;font-size:11px;font-weight:800}
+.cell-p{background:#def7eb;color:#24855f}
+.cell-a{background:#ffe3e8;color:#c64a64}
+.sheet-scroll{max-height:480px;overflow:auto}
+
+/* syllabus / to-do */
+.sy-summary,.dl-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:17px}
+.sy-card{background:#fff;border:1px solid #eeedf5;border-radius:14px;padding:14px}
+.sy-card strong,.sy-card small{display:block}
+.sy-card small{color:var(--muted);margin:3px 0 9px;font-size:10px}
+.topic-item{display:flex;align-items:center;gap:12px;padding:11px 13px;margin-bottom:8px;background:#fbfaff;border:1px solid #efedf7;border-radius:12px}
+.topic-item label{flex:1;display:flex;align-items:center;gap:10px;cursor:pointer;min-width:0}
+.topic-item label span{overflow-wrap:anywhere}
+.topic-item input[type=checkbox]{width:17px;height:17px;accent-color:var(--purple);flex-shrink:0}
+.topic-item small{color:var(--muted);font-size:10px;white-space:nowrap}
+.topic-item.done label span{text-decoration:line-through;color:#a4a5b8}
+.filter-btns{display:flex;gap:6px;flex-wrap:wrap}
+.filter-btns button{border:1px solid #e5e5f0;background:#fff;color:#6b6e86;padding:7px 12px;border-radius:30px;font-size:11px;font-weight:800}
+.filter-btns button.on{background:#eeeaff;color:#5f4ad8;border-color:#d6cffc}
+.lock-banner{margin-bottom:15px;padding:13px 16px;background:#fff7d9;border:1px solid #ffedab;border-radius:13px;color:#7a6a2c;line-height:1.6}
+
+/* deadlines */
+.deadline-card{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px;margin-bottom:10px;background:#fbfaff;border:1px solid #efedf7;border-radius:13px;flex-wrap:wrap}
+.deadline-card strong,.deadline-card small{display:block}
+.deadline-card small{color:var(--muted);margin-top:3px}
+.deadline-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+@media(max-width:1100px){.tt-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+  .tt-grid{grid-template-columns:1fr}
+  .topic-item{flex-wrap:wrap}
+  .cell{width:76px}
+  .data-table th,.data-table td{padding:10px 9px}
+}
