@@ -14,10 +14,10 @@ function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','
 function dateParts(value){if(!value)return{day:'--',month:'TBA'};const d=new Date(value+'T12:00:00');return{day:d.getDate(),month:d.toLocaleString('en',{month:'short'})}}
 function statusClass(status){return status==='Approved'?'status-approved':status==='Rejected'?'status-rejected':''}
 async function api(path, options={}) {const token=localStorage.getItem('aicte_token');const headers={...(options.headers||{})};if(token)headers.Authorization='Bearer '+token;const r=await fetch(API+path,{...options,headers});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.message||'Request failed');return d}
-function login(usernameValue){username=usernameValue;localStorage.setItem('aicte_username',username);$('login-view').hidden=true;$('dashboard-view').hidden=false;$('profile-name').textContent=displayName(username);$('profile-role').textContent=username==='faculty'?'Faculty':'Student';$('avatar').textContent=initials(username);$('role-label').textContent=username==='faculty'?'FACULTY WORKSPACE':'STUDENT SPACE';$('page-title').textContent='Your overview';$('welcome-title').innerHTML=`Hey ${escapeHtml(displayName(username).split(' ')[0])}, ready to grow? <span>✌</span>`;document.querySelectorAll('.faculty-nav').forEach(el=>el.hidden=username!=='faculty');$('records-section').querySelector('.page-intro h2').textContent=username==='faculty'?'Activity records':'My activity records';if(username==='faculty'){$('welcome-kicker').textContent='YOUR CAMPUS, YOUR IMPACT'}render();showSection('overview');setTimeout(initMaps,180);if(username!=='faculty'&&!sessionStorage.getItem('announcementsShown')){sessionStorage.setItem('announcementsShown','1');setTimeout(()=>openAnnouncements(),700)}}
+function login(usernameValue){username=usernameValue;localStorage.setItem('aicte_username',username);$('login-view').hidden=true;$('dashboard-view').hidden=false;$('profile-name').textContent=displayName(username);$('profile-role').textContent=username==='faculty'?'Faculty':'Student';$('avatar').textContent=initials(username);$('role-label').textContent=username==='faculty'?'FACULTY WORKSPACE':'STUDENT SPACE';$('page-title').textContent='Your overview';$('welcome-title').innerHTML=`Hey ${escapeHtml(displayName(username).split(' ')[0])}, ready to grow? <span>✌</span>`;document.querySelectorAll('.faculty-nav').forEach(el=>el.hidden=username!=='faculty');document.querySelectorAll('.student-nav').forEach(el=>el.hidden=username==='faculty');$('records-section').querySelector('.page-intro h2').textContent=username==='faculty'?'Activity records':'My activity records';if(username==='faculty'){$('welcome-kicker').textContent='YOUR CAMPUS, YOUR IMPACT'}render();showSection('overview');setTimeout(initMaps,180);if(username!=='faculty'&&!sessionStorage.getItem('announcementsShown')){sessionStorage.setItem('announcementsShown','1');setTimeout(()=>openAnnouncements(),700)}}
 function logout(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('camera').hidden=true;localStorage.removeItem('aicte_token');localStorage.removeItem('aicte_username');username='';$('dashboard-view').hidden=true;$('login-view').hidden=false}
-function showSection(section){document.querySelectorAll('.page-section').forEach(s=>s.hidden=s.id!==section+'-section');document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));const titles={overview:'Your overview',activities:'Explore activities',records:username==='faculty'?'Activity records':'My activity records',students:'Student records',manage:'Manage events'};$('page-title').textContent=titles[section]||'Your overview';if(section==='overview'||section==='manage')setTimeout(()=>{if(studentMap)studentMap.invalidateSize();if(facultyMap)facultyMap.invalidateSize()},150);if(section==='activities')renderEvents();}
-function render(){renderOverview();renderAnnouncements();renderEventCards();renderMyRecords();renderFacultyRecords();renderManageEvents();renderTips();updateNavCount();populateEventSelect();updateMapMarkers()}
+function showSection(section){document.querySelectorAll('.page-section').forEach(s=>s.hidden=s.id!==section+'-section');document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));const titles={overview:'Your overview',activities:'Explore activities',records:username==='faculty'?'Activity records':'My activity records',students:'Student records',manage:'Manage events',attendance:'Attendance & bunk predictor',register:'Attendance register',timetable:'Class timetable',syllabus:username==='faculty'?'Syllabus coverage':'My syllabus tracker',todo:'To-do list',deadlines:'Submission deadlines'};$('page-title').textContent=titles[section]||'Your overview';if(section==='overview'||section==='manage')setTimeout(()=>{if(studentMap)studentMap.invalidateSize();if(facultyMap)facultyMap.invalidateSize()},150);if(section==='activities')renderEventCards();renderAcademic(section);}
+function render(){renderOverview();renderAnnouncements();renderEventCards();renderMyRecords();renderFacultyRecords();renderManageEvents();renderTips();updateNavCount();populateEventSelect();updateMapMarkers();renderAcademic()}
 function myRecords(){return records().filter(r=>r.student===username)}
 function approvedPoints(list){return list.filter(r=>r.status==='Approved').reduce((sum,r)=>sum+Number(r.points||0),0)}
 function renderOverview(){const mine=myRecords(),approved=mine.filter(r=>r.status==='Approved'),pending=mine.filter(r=>r.status==='Pending'),upcoming=events().filter(e=>e.status!=='Completed'&&(!e.date||e.date>=new Date().toISOString().slice(0,10)));const points=approvedPoints(mine),percent=Math.min(100,Math.round(points/TARGET*100));$('points').textContent=points;$('target').textContent=TARGET;$('approved-count').textContent=approved.length;$('pending-count').textContent=pending.length;$('upcoming-count').textContent=upcoming.length;$('progress-percent').textContent=percent+'%';$('ring-value').textContent=points;$('bar').style.width=percent+'%';$('progress-ring').style.background=`conic-gradient(#6d55e8 ${percent*3.6}deg,#ece9fb 0deg)`;$('points-caption').textContent=points>=TARGET?'Target reached — amazing!':`${TARGET-points} points to go`;$('goal-message').textContent=points>=TARGET?'🎉 You reached your activity-point target!':`You need ${TARGET-points} more points to reach your target.`;$('milestone-copy').textContent=points>=TARGET?'Keep going and help your campus grow.':points>=50?'Halfway there — keep your momentum!':'Start with one activity this week.';$('activity-total').textContent=events().length+' activities';}
@@ -47,5 +47,593 @@ $('use-current-location').addEventListener('click',async()=>{try{const pos=await
 $('event-lat').addEventListener('change',updateMapMarkers);$('event-lon').addEventListener('change',updateMapMarkers);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-approve]'),r=e.target.closest('[data-reject]'),del=e.target.closest('[data-delete-event]'),check=e.target.closest('[data-event-checkin]');if(a||r){if(username!=='faculty')return;const id=Number((a||r).dataset[a?'approve':'reject']);const status=a?'Approved':'Rejected';save('aicte_records',records().map(x=>x.id===id?{...x,status,reviewedAt:new Date().toISOString()}:x));render();toast(`Record ${status.toLowerCase()}.`)}if(del){if(username!=='faculty')return;const id=Number(del.dataset.deleteEvent);if(!confirm('Delete this event? Existing student records will remain.'))return;save('aicte_events',events().filter(x=>x.id!==id));render();toast('Event deleted.')}if(check){showSection('records');$('student-event-select').value=check.dataset.eventCheckin;const ev=events().find(x=>String(x.id)===check.dataset.eventCheckin);if(ev)$('qr-code').value=ev.qr;toast('Scan the event QR or use the event code, then submit check-in.')}});
 $('scan-btn').addEventListener('click',async()=>{if(!navigator.mediaDevices?.getUserMedia){toast('Camera is unavailable. Enter the event code manually.');return}if(!('BarcodeDetector'in window)){toast('This browser does not support built-in QR scanning. Enter the event code manually.');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});const video=$('camera');video.srcObject=stream;video.hidden=false;await video.play();const detector=new BarcodeDetector({formats:['qr_code']});const scan=async()=>{if(!stream)return;try{const codes=await detector.detect(video);if(codes.length){$('qr-code').value=codes[0].rawValue;stream.getTracks().forEach(t=>t.stop());stream=null;video.hidden=true;toast('QR captured. Confirm the code and press Submit.');return}}catch{}requestAnimationFrame(scan)};scan()}catch{toast('Could not open camera. Allow camera access or enter the code manually.')}});
+/* =====================================================================
+   ACADEMIC MODULES
+   Lecture attendance + 75% bunk predictor, weekly timetable (faculty edits),
+   substitutions, faculty attendance register, syllabus trackers,
+   to-do list and submission deadlines.
+
+   All data is kept in localStorage for now. When you add the backend,
+   replace the read(...) and save(...) calls with API calls.
+   ===================================================================== */
+const PASS_PERCENT = 75;
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const STUDENT_LOGINS = ['aditi', 'student2'];
+
+const isFaculty = () => username === 'faculty';
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const todayStr = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const dayOf = dateStr => DAY_NAMES[new Date(dateStr + 'T12:00:00').getDay()];
+const friendlyDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : 'No date';
+const daysLeft = d => Math.round((new Date(d + 'T00:00:00') - new Date(todayStr() + 'T00:00:00')) / 86400000);
+
+/* ---------- sample data (used only the first time) ---------- */
+const DEFAULT_TIMETABLE = [
+  { id: 't1', day: 'Mon', start: '09:00', end: '10:00', code: 'CS301', subject: 'Data Structures', prof: 'Prof. Mehta', room: 'A-101' },
+  { id: 't2', day: 'Mon', start: '10:00', end: '11:00', code: 'CS302', subject: 'Operating Systems', prof: 'Prof. Kulkarni', room: 'A-101' },
+  { id: 't3', day: 'Mon', start: '11:15', end: '12:15', code: 'MA301', subject: 'Engineering Maths', prof: 'Prof. Rao', room: 'A-101' },
+  { id: 't4', day: 'Tue', start: '09:00', end: '10:00', code: 'CS303', subject: 'Computer Networks', prof: 'Prof. Iyer', room: 'A-102' },
+  { id: 't5', day: 'Tue', start: '10:00', end: '11:00', code: 'CS304', subject: 'Cryptography', prof: 'Prof. Deshmukh', room: 'A-102' },
+  { id: 't6', day: 'Tue', start: '11:15', end: '12:15', code: 'CS301', subject: 'Data Structures', prof: 'Prof. Mehta', room: 'A-102' },
+  { id: 't7', day: 'Wed', start: '09:00', end: '10:00', code: 'CS302', subject: 'Operating Systems', prof: 'Prof. Kulkarni', room: 'A-101' },
+  { id: 't8', day: 'Wed', start: '10:00', end: '11:00', code: 'MA301', subject: 'Engineering Maths', prof: 'Prof. Rao', room: 'A-101' },
+  { id: 't9', day: 'Wed', start: '11:15', end: '12:15', code: 'CS303', subject: 'Computer Networks', prof: 'Prof. Iyer', room: 'A-101' },
+  { id: 't10', day: 'Thu', start: '09:00', end: '10:00', code: 'CS304', subject: 'Cryptography', prof: 'Prof. Deshmukh', room: 'A-102' },
+  { id: 't11', day: 'Thu', start: '10:00', end: '11:00', code: 'CS301', subject: 'Data Structures', prof: 'Prof. Mehta', room: 'A-102' },
+  { id: 't12', day: 'Thu', start: '11:15', end: '12:15', code: 'CS302', subject: 'Operating Systems', prof: 'Prof. Kulkarni', room: 'A-102' },
+  { id: 't13', day: 'Fri', start: '09:00', end: '10:00', code: 'MA301', subject: 'Engineering Maths', prof: 'Prof. Rao', room: 'A-101' },
+  { id: 't14', day: 'Fri', start: '10:00', end: '11:00', code: 'CS303', subject: 'Computer Networks', prof: 'Prof. Iyer', room: 'A-101' },
+  { id: 't15', day: 'Fri', start: '11:15', end: '12:15', code: 'CS304', subject: 'Cryptography', prof: 'Prof. Deshmukh', room: 'A-101' }
+];
+const DEFAULT_ROSTER = [
+  { id: 'aditi', roll: '01', name: 'Aditi Singh' },
+  { id: 'student2', roll: '02', name: 'Student Two' },
+  { id: 'rahul-sharma', roll: '03', name: 'Rahul Sharma' },
+  { id: 'priya-patel', roll: '04', name: 'Priya Patel' },
+  { id: 'karan-shah', roll: '05', name: 'Karan Shah' },
+  { id: 'neha-verma', roll: '06', name: 'Neha Verma' },
+  { id: 'aman-gupta', roll: '07', name: 'Aman Gupta' },
+  { id: 'sneha-iyer', roll: '08', name: 'Sneha Iyer' }
+];
+
+/* ---------- data access ---------- */
+function getTimetable() {
+  let t = read('cl_timetable', null);
+  if (!Array.isArray(t)) { t = DEFAULT_TIMETABLE.map(x => ({ ...x })); save('cl_timetable', t); }
+  return t;
+}
+function getRoster() {
+  let r = read('cl_roster', null);
+  if (!Array.isArray(r)) { r = DEFAULT_ROSTER.map(x => ({ ...x })); save('cl_roster', r); }
+  return r;
+}
+const getChanges = () => read('cl_changes');
+const getAttendance = () => read('cl_attendance');
+const sortedSlots = list => list.slice().sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.start.localeCompare(b.start));
+function subjectsList() {
+  const map = new Map();
+  getTimetable().forEach(s => { if (!map.has(s.code)) map.set(s.code, { code: s.code, name: s.subject }); });
+  return [...map.values()];
+}
+
+/* What a lecture really is on a given date, after substitutions/cancellations */
+function effectiveLecture(slot, date) {
+  const ch = getChanges().find(c => c.date === date && c.slotId === slot.id);
+  const out = { code: slot.code, subject: slot.subject, prof: slot.prof, cancelled: false, substitute: false, change: ch || null };
+  if (ch && ch.type === 'cancelled') out.cancelled = true;
+  if (ch && ch.type === 'substitute') {
+    out.substitute = true;
+    out.prof = ch.subProf || slot.prof;
+    const s = subjectsList().find(x => x.code === ch.countCode);
+    if (s) { out.code = s.code; out.subject = s.name; }
+  }
+  return out;
+}
+
+/* ---------- attendance maths ---------- */
+function attendanceStats(student) {
+  const slots = getTimetable(), per = {};
+  subjectsList().forEach(s => { per[s.code] = { code: s.code, name: s.name, A: 0, T: 0 }; });
+  getAttendance().filter(r => r.student === student).forEach(r => {
+    const slot = slots.find(s => s.id === r.slotId);
+    if (!slot) return;
+    const eff = effectiveLecture(slot, r.date);
+    if (eff.cancelled || r.status === 'Cancelled') return;        // cancelled lectures are not counted
+    if (!per[eff.code]) per[eff.code] = { code: eff.code, name: eff.subject, A: 0, T: 0 };
+    per[eff.code].T++;
+    if (r.status === 'Attended') per[eff.code].A++;
+  });
+  const list = Object.values(per);
+  return { list, A: list.reduce((s, x) => s + x.A, 0), T: list.reduce((s, x) => s + x.T, 0) };
+}
+
+/* A = attended, T = total held.
+   skip = floor((100A - 75T) / 75)   |   need = ceil((75T - 100A) / 25) */
+function predictor(A, T) {
+  if (!T) return { pct: null, skip: 0, need: 0 };
+  const pct = A / T * 100;
+  if (100 * A >= PASS_PERCENT * T) {
+    return { pct, skip: Math.max(0, Math.floor((100 * A - PASS_PERCENT * T) / PASS_PERCENT)), need: 0 };
+  }
+  return { pct, skip: 0, need: Math.max(0, Math.ceil((PASS_PERCENT * T - 100 * A) / (100 - PASS_PERCENT))) };
+}
+
+/* =====================  STUDENT: ATTENDANCE  ===================== */
+function renderAttendance() {
+  if (isFaculty()) return;
+  const st = attendanceStats(username), p = predictor(st.A, st.T);
+  const below = st.T > 0 && 100 * st.A < PASS_PERCENT * st.T;
+
+  $('ac-pct').textContent = p.pct === null ? '—' : p.pct.toFixed(1) + '%';
+  $('ac-attended').textContent = st.A;
+  $('ac-total').textContent = st.T;
+  $('ac-skip-label').textContent = below ? 'Lectures to attend' : 'Safe skips left';
+  $('ac-skip').textContent = below ? p.need : p.skip;
+
+  let cls = 'ac-neutral', label = 'No data yet', msg = 'Log your lectures below to see how many you can skip.';
+  if (st.T > 0) {
+    if (below) {
+      cls = 'ac-bad'; label = 'Shortage';
+      msg = `You are below ${PASS_PERCENT}%. Attend the next <b>${p.need}</b> lecture(s) in a row to get back to ${PASS_PERCENT}%.`;
+    } else if (p.skip <= 1) {
+      cls = 'ac-warn'; label = 'On the edge';
+      msg = p.skip === 0
+        ? `You are right at the limit. Skipping the next lecture would take you below ${PASS_PERCENT}%.`
+        : `You can safely skip only <b>1</b> more lecture and stay at or above ${PASS_PERCENT}%.`;
+    } else {
+      cls = 'ac-good'; label = 'Safe';
+      msg = `You can safely skip <b>${p.skip}</b> more lectures and still stay at or above ${PASS_PERCENT}%.`;
+    }
+  }
+  $('ac-status').className = 'ac-badge ' + cls;
+  $('ac-status').textContent = label;
+  $('ac-message').innerHTML = msg;
+
+  $('ac-subjects').innerHTML = st.list.map(s => {
+    const sp = predictor(s.A, s.T), sBelow = s.T > 0 && 100 * s.A < PASS_PERCENT * s.T;
+    const pct = s.T ? s.A / s.T * 100 : 0;
+    const note = s.T === 0 ? '—' : sBelow ? `Attend next <b>${sp.need}</b>` : `Can skip <b>${sp.skip}</b>`;
+    return `<tr><td><strong>${escapeHtml(s.name)}</strong><br><small>${escapeHtml(s.code)}</small></td><td>${s.A}</td><td>${s.T}</td>
+      <td><div class="bar ${sBelow ? 'bad' : 'good'}"><i style="width:${Math.min(100, pct)}%"></i></div><small>${s.T ? pct.toFixed(0) + '%' : '—'}</small></td><td>${note}</td></tr>`;
+  }).join('') || '<tr><td colspan="5">No subjects yet. Ask faculty to set the timetable.</td></tr>';
+
+  renderLectureLog();
+}
+
+function renderLectureLog() {
+  if (isFaculty()) return;
+  const input = $('ac-date');
+  if (!input.value) input.value = todayStr();
+  input.max = todayStr();
+  const date = input.value;
+  const slots = sortedSlots(getTimetable()).filter(s => s.day === dayOf(date));
+  const recs = getAttendance().filter(r => r.student === username && r.date === date);
+
+  $('ac-log').innerHTML = slots.length ? slots.map(s => {
+    const eff = effectiveLecture(s, date), rec = recs.find(r => r.slotId === s.id);
+    const byFaculty = rec && rec.markedBy === 'Faculty';
+    const locked = eff.cancelled || byFaculty;
+    const cur = eff.cancelled ? 'Cancelled' : rec ? rec.status : '';
+    const tag = eff.cancelled ? '<span class="tag tag-bad">Cancelled by faculty</span>'
+      : eff.substitute ? `<span class="tag tag-warn">Substitute: ${escapeHtml(eff.prof)}</span>` : '';
+    const lock = byFaculty ? '<span class="tag tag-good">Marked by faculty</span>' : '';
+    const btn = (status, c) => `<button type="button" class="seg-btn ${c}${cur === status ? ' on' : ''}" data-ac-slot="${s.id}" data-ac-status="${status}" ${locked ? 'disabled' : ''}>${status}</button>`;
+    return `<div class="lecture-row"><div class="lecture-info"><strong>${escapeHtml(eff.subject)}</strong>
+      <small>${escapeHtml(s.start)}–${escapeHtml(s.end)} · ${escapeHtml(eff.prof)}</small><div>${tag}${lock}</div></div>
+      <div class="seg">${btn('Attended', 'att')}${btn('Bunked', 'bun')}${btn('Cancelled', 'can')}</div></div>`;
+  }).join('') : `<p class="muted">No lectures scheduled on ${escapeHtml(friendlyDate(date))}.</p>`;
+}
+
+function acSetStatus(slotId, status) {
+  if (isFaculty()) return;
+  const date = $('ac-date').value || todayStr();
+  if (date > todayStr()) { toast('You cannot log a lecture in the future.'); return; }
+  const all = getAttendance();
+  const i = all.findIndex(r => r.student === username && r.date === date && r.slotId === slotId);
+  if (i >= 0 && all[i].markedBy === 'Faculty') { toast('Faculty has marked this lecture, so it cannot be changed.'); return; }
+  if (i >= 0 && all[i].status === status) all.splice(i, 1);        // tapping the same button again = undo
+  else {
+    const rec = { student: username, date, slotId, status, markedBy: 'Student', at: new Date().toISOString() };
+    if (i >= 0) all[i] = rec; else all.push(rec);
+  }
+  save('cl_attendance', all);
+  renderAttendance();
+}
+
+/* =====================  TIMETABLE (faculty edits)  ===================== */
+function slotCard(s, fac) {
+  return `<div class="tt-slot"><b>${escapeHtml(s.start)}–${escapeHtml(s.end)}</b>
+    <strong>${escapeHtml(s.subject)}</strong><small>${escapeHtml(s.code)} · ${escapeHtml(s.prof)}${s.room ? ' · ' + escapeHtml(s.room) : ''}</small>
+    ${fac ? `<button type="button" class="mini-btn reject" data-del-slot="${s.id}">Remove</button>` : ''}</div>`;
+}
+
+function renderTimetable() {
+  const fac = isFaculty();
+  $('tt-faculty-tools').hidden = !fac;
+  $('tt-chip').textContent = fac ? 'You can edit this' : 'View only';
+  const slots = sortedSlots(getTimetable());
+  $('tt-grid').innerHTML = DAYS.map(d => {
+    const list = slots.filter(s => s.day === d);
+    return `<div class="tt-day"><h4>${d}</h4>${list.length ? list.map(s => slotCard(s, fac)).join('') : '<p class="muted tt-empty">No lectures</p>'}</div>`;
+  }).join('');
+
+  const changes = getChanges().slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 25);
+  $('tt-changes').innerHTML = changes.length ? changes.map(c => {
+    const s = slots.find(x => x.id === c.slotId);
+    if (!s) return '';
+    const what = c.type === 'cancelled'
+      ? '<span class="tag tag-bad">Cancelled</span>'
+      : `<span class="tag tag-warn">Substitute: ${escapeHtml(c.subProf || 'another teacher')}</span>`;
+    const counted = c.type === 'substitute' && c.countCode && c.countCode !== s.code ? ` · counts under ${escapeHtml(c.countCode)}` : '';
+    return `<div class="approval-row"><div><strong>${escapeHtml(friendlyDate(c.date))} · ${escapeHtml(s.start)} ${escapeHtml(s.subject)}</strong>
+      <small>${what}${counted}${c.note ? ' · ' + escapeHtml(c.note) : ''}</small></div>
+      ${fac ? `<button type="button" class="mini-btn reject" data-del-change="${c.id}">Delete</button>` : ''}</div>`;
+  }).join('') : '<p class="muted">No substitutions or cancellations.</p>';
+
+  if (fac) chgFillSlots();
+}
+
+function chgFillSlots() {
+  const date = $('chg-date').value || todayStr();
+  $('chg-date').value = date;
+  const sel = $('chg-slot'), prev = sel.value;
+  const slots = sortedSlots(getTimetable()).filter(s => s.day === dayOf(date));
+  sel.innerHTML = slots.length
+    ? slots.map(s => `<option value="${s.id}">${escapeHtml(s.start + ' ' + s.code + ' ' + s.subject)}</option>`).join('')
+    : '<option value="">No lectures on this day</option>';
+  if (slots.some(s => s.id === prev)) sel.value = prev;
+  const cnt = $('chg-count'), prevC = cnt.value;
+  cnt.innerHTML = '<option value="">Same subject as the timetable</option>' +
+    subjectsList().map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.code + ' ' + s.name)}</option>`).join('');
+  cnt.value = prevC;
+}
+
+/* =====================  FACULTY: REGISTER  ===================== */
+let rgState = {};
+
+function rgPrepare() {
+  if (!isFaculty()) return;
+  const dateInput = $('rg-date');
+  if (!dateInput.value) dateInput.value = todayStr();
+  const slots = sortedSlots(getTimetable()).filter(s => s.day === dayOf(dateInput.value));
+  const sel = $('rg-slot'), prev = sel.value;
+  sel.innerHTML = slots.length
+    ? slots.map(s => `<option value="${s.id}">${escapeHtml(s.start + '–' + s.end + ' · ' + s.code + ' ' + s.subject)}</option>`).join('')
+    : '<option value="">No lectures on this day</option>';
+  if (slots.some(s => s.id === prev)) sel.value = prev;
+  rgReload();
+}
+
+function rgReload() {
+  const date = $('rg-date').value, slotId = $('rg-slot').value;
+  const att = getAttendance();
+  let saved = false;
+  rgState = {};
+  if (slotId) {
+    getRoster().forEach(st => {
+      const rec = att.find(r => r.student === st.id && r.date === date && r.slotId === slotId && r.markedBy === 'Faculty');
+      if (rec) saved = true;
+      rgState[st.id] = rec ? (rec.status === 'Attended' ? 'P' : 'A') : 'P';
+    });
+  }
+  $('rg-note').textContent = !slotId ? 'Choose a date that has a lecture in the timetable.'
+    : saved ? 'This register was saved earlier. Saving again will update it.' : 'Not saved yet. Everyone starts as Present; click a cell to mark Absent.';
+  renderRegister();
+}
+
+function renderRegister() {
+  if (!isFaculty()) return;
+  const date = $('rg-date').value, slotId = $('rg-slot').value;
+  const att = getAttendance(), roster = getRoster();
+  $('rg-body').innerHTML = slotId ? roster.map((st, i) => {
+    const v = rgState[st.id] || 'P';
+    const own = att.find(r => r.student === st.id && r.date === date && r.slotId === slotId && r.markedBy === 'Student');
+    return `<tr><td class="rownum">${i + 1}</td><td>${escapeHtml(st.roll)}</td><td><strong>${escapeHtml(st.name)}</strong></td>
+      <td><button type="button" class="cell ${v === 'P' ? 'cell-p' : 'cell-a'}" data-rg-toggle="${st.id}">${v === 'P' ? 'Present' : 'Absent'}</button></td>
+      <td class="own-log">${own ? escapeHtml(own.status) : '—'}</td></tr>`;
+  }).join('') : '<tr><td colspan="5">No lecture selected.</td></tr>';
+  const vals = Object.values(rgState), p = vals.filter(x => x === 'P').length, a = vals.length - p;
+  $('rg-present').textContent = p;
+  $('rg-absent').textContent = a;
+  $('rg-total').textContent = vals.length;
+  $('rg-percent').textContent = vals.length ? Math.round(p / vals.length * 100) + '%' : '—';
+  if (slotId) {
+    const slot = getTimetable().find(s => s.id === slotId), eff = slot ? effectiveLecture(slot, date) : null;
+    if (eff && eff.cancelled) $('rg-note').textContent = 'Note: this lecture is marked cancelled, so it will not count towards attendance.';
+  }
+}
+
+function rgSave() {
+  if (!isFaculty()) return;
+  const date = $('rg-date').value, slotId = $('rg-slot').value;
+  if (!slotId) { toast('Choose a lecture first.'); return; }
+  const all = getAttendance(), now = new Date().toISOString();
+  Object.keys(rgState).forEach(id => {
+    const rec = { student: id, date, slotId, status: rgState[id] === 'P' ? 'Attended' : 'Bunked', markedBy: 'Faculty', at: now };
+    const i = all.findIndex(r => r.student === id && r.date === date && r.slotId === slotId);
+    if (i >= 0) all[i] = rec; else all.push(rec);             // faculty entry overrides the student's own log
+  });
+  save('cl_attendance', all);
+  toast(`Register saved for ${Object.keys(rgState).length} students.`);
+  rgReload();
+}
+
+/* =====================  SYLLABUS TRACKERS  ===================== */
+/* Student data is stored under a per-user key. The faculty screen only ever reads
+   its own key (cl_fsyllabus), so students' private trackers are never shown to faculty. */
+let sySelected = '';
+const syKey = () => isFaculty() ? 'cl_fsyllabus' : 'cl_syllabus_' + username;
+const syData = () => read(syKey(), {});
+
+function renderSyllabus() {
+  const fac = isFaculty(), subjects = subjectsList(), data = syData();
+  $('sy-banner').innerHTML = fac
+    ? '📘 <b>Class coverage tracker.</b> Tick topics as you finish teaching them.'
+    : '🔒 <b>Private to you.</b> Only you can see this tracker. Faculty cannot.';
+  $('sy-import').hidden = fac;
+  if (!subjects.some(s => s.code === sySelected)) sySelected = subjects[0] ? subjects[0].code : '';
+  $('sy-subject').innerHTML = subjects.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.code + ' · ' + s.name)}</option>`).join('');
+  $('sy-subject').value = sySelected;
+
+  $('sy-summary').innerHTML = subjects.map(s => {
+    const list = data[s.code] || [], done = list.filter(t => t.done).length;
+    const pct = list.length ? Math.round(done / list.length * 100) : 0;
+    return `<div class="sy-card"><strong>${escapeHtml(s.name)}</strong><small>${escapeHtml(s.code)} · ${done}/${list.length} topics</small>
+      <div class="bar good"><i style="width:${pct}%"></i></div><small>${pct}%</small></div>`;
+  }).join('') || '<p class="muted">Add subjects in the timetable first.</p>';
+
+  const list = data[sySelected] || [];
+  $('sy-list').innerHTML = list.length ? list.map(t => `<div class="topic-item${t.done ? ' done' : ''}">
+    <label><input type="checkbox" data-sy-toggle="${t.id}" ${t.done ? 'checked' : ''}> <span>${escapeHtml(t.topic)}</span></label>
+    <small>${t.done && t.doneOn ? 'Done ' + escapeHtml(friendlyDate(t.doneOn)) : ''}</small>
+    <button type="button" class="mini-btn reject" data-sy-del="${t.id}">Delete</button></div>`).join('')
+    : '<p class="muted">No topics yet. Add some above.</p>';
+}
+
+function syAddTopics(text) {
+  if (!sySelected) { toast('Add a subject to the timetable first.'); return; }
+  const lines = text.split('\n').map(x => x.trim()).filter(Boolean);
+  if (!lines.length) return;
+  const data = syData();
+  data[sySelected] = [...(data[sySelected] || []), ...lines.map(t => ({ id: uid(), topic: t, done: false, doneOn: '' }))];
+  save(syKey(), data);
+  renderSyllabus();
+  toast(`${lines.length} topic(s) added.`);
+}
+
+function syImport() {
+  if (isFaculty() || !sySelected) return;
+  const source = read('cl_fsyllabus', {})[sySelected] || [];
+  const data = syData(), mine = data[sySelected] || [];
+  const have = new Set(mine.map(t => t.topic.toLowerCase()));
+  const fresh = source.filter(t => !have.has(t.topic.toLowerCase())).map(t => ({ id: uid(), topic: t.topic, done: false, doneOn: '' }));
+  if (!fresh.length) { toast('Nothing new to import for this subject.'); return; }
+  data[sySelected] = [...mine, ...fresh];
+  save(syKey(), data);
+  renderSyllabus();
+  toast(`${fresh.length} topic(s) imported.`);
+}
+
+/* =====================  TO-DO LIST  ===================== */
+let tdFilter = 'all';
+const tdKey = () => 'cl_todos_' + username;
+const tdItems = () => read(tdKey());
+
+function renderTodo() {
+  const items = tdItems();
+  const active = items.filter(t => !t.done).length;
+  document.querySelectorAll('[data-td-filter]').forEach(b => b.classList.toggle('on', b.dataset.tdFilter === tdFilter));
+  $('td-count').textContent = `${active} to do · ${items.length - active} done`;
+  const shown = items.filter(t => tdFilter === 'all' || (tdFilter === 'done' ? t.done : !t.done))
+    .sort((a, b) => Number(a.done) - Number(b.done) || (a.due || '9999').localeCompare(b.due || '9999') || a.createdAt.localeCompare(b.createdAt));
+  $('td-list').innerHTML = shown.length ? shown.map(t => {
+    const over = t.due && !t.done && t.due < todayStr();
+    return `<div class="topic-item${t.done ? ' done' : ''}"><label><input type="checkbox" data-td-toggle="${t.id}" ${t.done ? 'checked' : ''}> <span>${escapeHtml(t.text)}</span></label>
+      <small class="${over ? 'overdue' : ''}">${t.due ? (over ? 'Overdue · ' : 'Due ') + escapeHtml(friendlyDate(t.due)) : ''}</small>
+      <button type="button" class="mini-btn reject" data-td-del="${t.id}">Delete</button></div>`;
+  }).join('') : '<p class="muted">Nothing here. Add a task above.</p>';
+}
+
+/* =====================  SUBMISSION DEADLINES  ===================== */
+const getDeadlines = () => read('cl_deadlines');
+const getSubmitted = () => read('cl_submitted', {});
+
+function renderDeadlines() {
+  const fac = isFaculty();
+  $('dl-form').hidden = !fac;
+  const subs = subjectsList();
+  const sel = $('dl-subject'), prev = sel.value;
+  sel.innerHTML = '<option value="">General</option>' + subs.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.code + ' · ' + s.name)}</option>`).join('');
+  sel.value = prev;
+  const submitted = getSubmitted();
+  const list = getDeadlines().slice().sort((a, b) => {
+    const as = (submitted[a.id] || []).includes(username), bs = (submitted[b.id] || []).includes(username);
+    return (!fac ? Number(as) - Number(bs) : 0) || a.due.localeCompare(b.due);
+  });
+  $('dl-list').innerHTML = list.length ? list.map(d => {
+    const who = submitted[d.id] || [], mine = who.includes(username), left = daysLeft(d.due);
+    let chip = `<span class="tag tag-good">${left} days left</span>`;
+    if (mine && !fac) chip = '<span class="tag tag-good">Submitted ✓</span>';
+    else if (left < 0) chip = `<span class="tag tag-bad">Overdue by ${-left} day(s)</span>`;
+    else if (left === 0) chip = '<span class="tag tag-bad">Due today</span>';
+    else if (left <= 2) chip = `<span class="tag tag-warn">${left} day(s) left</span>`;
+    const action = fac
+      ? `<small>${who.length} of ${STUDENT_LOGINS.length} students marked submitted</small><button type="button" class="mini-btn reject" data-dl-del="${d.id}">Delete</button>`
+      : `<button type="button" class="btn ${mine ? 'btn-outline' : 'btn-primary'} small-btn" data-dl-submit="${d.id}">${mine ? 'Undo' : 'Mark submitted'}</button>`;
+    return `<div class="deadline-card"><div><strong>${escapeHtml(d.title)}</strong>
+      <small>${d.code ? escapeHtml(d.code) + ' · ' : ''}Due ${escapeHtml(friendlyDate(d.due))}${d.notes ? ' · ' + escapeHtml(d.notes) : ''}</small><div>${chip}</div></div>
+      <div class="deadline-actions">${action}</div></div>`;
+  }).join('') : '<p class="muted">No deadlines posted yet.</p>';
+}
+
+/* =====================  RENDER HOOK + EVENTS  ===================== */
+function renderAcademic(section) {
+  if (!username) return;
+  renderAttendance();
+  renderTimetable();
+  renderSyllabus();
+  renderTodo();
+  renderDeadlines();
+  if (isFaculty()) {
+    if (section === 'register') rgPrepare(); else renderRegister();
+  }
+}
+
+document.addEventListener('click', e => {
+  const t = e.target;
+  const ac = t.closest('[data-ac-slot]');
+  if (ac && !ac.disabled) acSetStatus(ac.dataset.acSlot, ac.dataset.acStatus);
+
+  const delSlot = t.closest('[data-del-slot]');
+  if (delSlot && isFaculty()) {
+    if (!confirm('Remove this lecture from the timetable?')) return;
+    const id = delSlot.dataset.delSlot;
+    save('cl_timetable', getTimetable().filter(s => s.id !== id));
+    save('cl_changes', getChanges().filter(c => c.slotId !== id));
+    renderAcademic();
+    toast('Lecture removed.');
+  }
+
+  const delChange = t.closest('[data-del-change]');
+  if (delChange && isFaculty()) {
+    save('cl_changes', getChanges().filter(c => c.id !== delChange.dataset.delChange));
+    renderAcademic();
+    toast('Update removed.');
+  }
+
+  const rg = t.closest('[data-rg-toggle]');
+  if (rg && isFaculty()) { const id = rg.dataset.rgToggle; rgState[id] = rgState[id] === 'P' ? 'A' : 'P'; renderRegister(); }
+
+  const syT = t.closest('[data-sy-toggle]');
+  if (syT) {
+    const data = syData();
+    const item = (data[sySelected] || []).find(x => x.id === syT.dataset.syToggle);
+    if (item) { item.done = !item.done; item.doneOn = item.done ? todayStr() : ''; save(syKey(), data); renderSyllabus(); }
+  }
+  const syD = t.closest('[data-sy-del]');
+  if (syD) {
+    const data = syData();
+    data[sySelected] = (data[sySelected] || []).filter(x => x.id !== syD.dataset.syDel);
+    save(syKey(), data); renderSyllabus();
+  }
+
+  const tdT = t.closest('[data-td-toggle]');
+  if (tdT) { save(tdKey(), tdItems().map(x => x.id === tdT.dataset.tdToggle ? { ...x, done: !x.done } : x)); renderTodo(); }
+  const tdD = t.closest('[data-td-del]');
+  if (tdD) { save(tdKey(), tdItems().filter(x => x.id !== tdD.dataset.tdDel)); renderTodo(); }
+  const tdF = t.closest('[data-td-filter]');
+  if (tdF) { tdFilter = tdF.dataset.tdFilter; renderTodo(); }
+
+  const dlD = t.closest('[data-dl-del]');
+  if (dlD && isFaculty()) {
+    if (!confirm('Delete this deadline?')) return;
+    save('cl_deadlines', getDeadlines().filter(x => x.id !== dlD.dataset.dlDel));
+    renderDeadlines(); toast('Deadline deleted.');
+  }
+  const dlS = t.closest('[data-dl-submit]');
+  if (dlS && !isFaculty()) {
+    const all = getSubmitted(), id = dlS.dataset.dlSubmit, who = all[id] || [];
+    all[id] = who.includes(username) ? who.filter(x => x !== username) : [...who, username];
+    save('cl_submitted', all); renderDeadlines();
+  }
+});
+
+/* ---- student attendance ---- */
+$('ac-date').addEventListener('change', renderLectureLog);
+
+/* ---- timetable forms (faculty only) ---- */
+$('tt-form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!isFaculty()) { toast('Only faculty can change the timetable.'); return; }
+  const slot = {
+    id: uid(), day: $('tt-day').value, start: $('tt-start').value, end: $('tt-end').value,
+    code: $('tt-code').value.trim().toUpperCase(), subject: $('tt-subject').value.trim(),
+    prof: $('tt-prof').value.trim(), room: $('tt-room').value.trim()
+  };
+  if (!slot.start || !slot.end || !slot.code || !slot.subject || !slot.prof) { toast('Fill in time, subject code, subject and professor.'); return; }
+  if (slot.end <= slot.start) { toast('End time must be after the start time.'); return; }
+  if (getTimetable().some(s => s.day === slot.day && s.start < slot.end && slot.start < s.end)) { toast('That time overlaps another lecture on the same day.'); return; }
+  save('cl_timetable', [...getTimetable(), slot]);
+  e.target.reset();
+  renderAcademic();
+  toast('Lecture added to the timetable.');
+});
+
+$('chg-date').addEventListener('change', chgFillSlots);
+$('chg-type').addEventListener('change', () => {
+  const sub = $('chg-type').value === 'substitute';
+  $('chg-sub-fields').hidden = !sub;
+});
+$('chg-form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!isFaculty()) { toast('Only faculty can change the timetable.'); return; }
+  const date = $('chg-date').value, slotId = $('chg-slot').value, type = $('chg-type').value;
+  if (!date || !slotId) { toast('Choose a date and a lecture.'); return; }
+  const item = { id: uid(), date, slotId, type, subProf: '', countCode: '', note: $('chg-note').value.trim() };
+  if (type === 'substitute') {
+    item.subProf = $('chg-prof').value.trim();
+    item.countCode = $('chg-count').value;
+    if (!item.subProf) { toast('Enter the name of the teacher taking the class.'); return; }
+  }
+  save('cl_changes', [...getChanges().filter(c => !(c.date === date && c.slotId === slotId)), item]);
+  $('chg-prof').value = ''; $('chg-note').value = '';
+  renderAcademic();
+  toast(type === 'cancelled' ? 'Lecture marked as cancelled.' : 'Substitution saved. Students will see it.');
+});
+
+/* ---- register ---- */
+$('rg-date').addEventListener('change', rgPrepare);
+$('rg-slot').addEventListener('change', rgReload);
+$('rg-all-present').addEventListener('click', () => { Object.keys(rgState).forEach(id => rgState[id] = 'P'); renderRegister(); });
+$('rg-all-absent').addEventListener('click', () => { Object.keys(rgState).forEach(id => rgState[id] = 'A'); renderRegister(); });
+$('rg-save').addEventListener('click', rgSave);
+$('rg-add-form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!isFaculty()) return;
+  const roll = $('rg-roll').value.trim(), name = $('rg-name').value.trim();
+  if (!roll || !name) return;
+  const roster = getRoster();
+  if (roster.some(s => s.roll === roll)) { toast('That roll number already exists.'); return; }
+  let id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'student';
+  if (roster.some(s => s.id === id)) id += '-' + roll;
+  roster.push({ id, roll, name });
+  roster.sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
+  save('cl_roster', roster);
+  e.target.reset();
+  rgState[id] = 'P';
+  renderRegister();
+  toast('Student added to the register.');
+});
+
+/* ---- syllabus ---- */
+$('sy-subject').addEventListener('change', () => { sySelected = $('sy-subject').value; renderSyllabus(); });
+$('sy-form').addEventListener('submit', e => { e.preventDefault(); syAddTopics($('sy-topic').value); $('sy-topic').value = ''; });
+$('sy-import').addEventListener('click', syImport);
+
+/* ---- to-do ---- */
+$('td-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const text = $('td-text').value.trim();
+  if (!text) return;
+  save(tdKey(), [...tdItems(), { id: uid(), text, due: $('td-due').value, done: false, createdAt: new Date().toISOString() }]);
+  $('td-text').value = ''; $('td-due').value = '';
+  renderTodo();
+});
+$('td-clear').addEventListener('click', () => { save(tdKey(), tdItems().filter(t => !t.done)); renderTodo(); toast('Completed tasks cleared.'); });
+
+/* ---- deadlines ---- */
+$('dl-form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!isFaculty()) return;
+  const title = $('dl-title').value.trim(), due = $('dl-due').value;
+  if (!title || !due) { toast('Enter a title and a due date.'); return; }
+  save('cl_deadlines', [...getDeadlines(), { id: uid(), title, code: $('dl-subject').value, due, notes: $('dl-notes').value.trim() }]);
+  e.target.reset();
+  renderDeadlines();
+  toast('Deadline posted. Students can see it now.');
+});
+
+
 // Restore the last signed-in demo session for convenience.
 const remembered=localStorage.getItem('aicte_username');if(remembered&&['aditi','student2','faculty'].includes(remembered)){username=remembered;login(remembered)}else{$('login-view').hidden=false;$('dashboard-view').hidden=true}
