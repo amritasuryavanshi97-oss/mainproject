@@ -198,6 +198,7 @@ function renderAttendance() {
       <td><div class="bar ${sBelow ? 'bad' : 'good'}"><i style="width:${Math.min(100, pct)}%"></i></div><small>${s.T ? pct.toFixed(0) + '%' : '—'}</small></td><td>${note}</td></tr>`;
   }).join('') || '<tr><td colspan="5">No subjects yet. Ask faculty to set the timetable.</td></tr>';
 
+  renderAttendanceCharts(st);
   renderLectureLog();
 }
 
@@ -239,6 +240,39 @@ function acSetStatus(slotId, status) {
   }
   save('cl_attendance', all);
   renderAttendance();
+}
+
+/* Charts are drawn with plain CSS/SVG, so no chart library is needed */
+function renderAttendanceCharts(st) {
+  $('ac-chart-subjects').innerHTML = st.list.map(s => {
+    const pct = s.T ? s.A / s.T * 100 : 0, below = s.T > 0 && 100 * s.A < PASS_PERCENT * s.T;
+    const cls = !s.T ? 'none' : below ? 'bad' : 'good';
+    return `<div class="hbar"><span class="hbar-label">${escapeHtml(s.code)}</span><div class="hbar-track" title="${escapeHtml(s.name)}: ${s.A}/${s.T}"><i class="${cls}" style="width:${pct}%"></i><u style="left:${PASS_PERCENT}%"></u></div><b>${s.T ? Math.round(pct) + '%' : '—'}</b></div>`;
+  }).join('') + `<p class="hint">The red line marks the ${PASS_PERCENT}% minimum.</p>`;
+
+  const slots = getTimetable(), byDate = {};
+  getAttendance().filter(r => r.student === username).forEach(r => {
+    const slot = slots.find(s => s.id === r.slotId);
+    if (!slot || effectiveLecture(slot, r.date).cancelled || r.status === 'Cancelled') return;
+    const d = byDate[r.date] = byDate[r.date] || { A: 0, T: 0 };
+    d.T++; if (r.status === 'Attended') d.A++;
+  });
+  const dates = Object.keys(byDate).sort();
+  if (dates.length < 2) { $('ac-chart-trend').innerHTML = '<p class="muted">Log lectures on at least two different days to see your trend.</p>'; return; }
+  let A = 0, T = 0;
+  const pts = dates.map(d => { A += byDate[d].A; T += byDate[d].T; return { d, pct: A / T * 100 }; });
+  const W = 400, H = 180, px = 30, py = 14;
+  const x = i => px + i * (W - px - 10) / (pts.length - 1), y = v => H - 24 - v / 100 * (H - 24 - py);
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.pct).toFixed(1)}`).join(' ');
+  $('ac-chart-trend').innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="trend" role="img" aria-label="Attendance percentage over time">
+    <line x1="${px}" x2="${W - 10}" y1="${y(PASS_PERCENT)}" y2="${y(PASS_PERCENT)}" stroke="#c64a64" stroke-dasharray="5 4"/>
+    <text x="2" y="${y(PASS_PERCENT) + 3}" font-size="9" fill="#c64a64">75%</text>
+    <text x="2" y="${y(100) + 3}" font-size="9" fill="#9a98b3">100</text><text x="2" y="${y(0) + 3}" font-size="9" fill="#9a98b3">0</text>
+    <polyline points="${line}" fill="none" stroke="#6c55e8" stroke-width="2.5" stroke-linejoin="round"/>
+    ${pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.pct).toFixed(1)}" r="3.5" fill="#6c55e8"><title>${p.d}: ${p.pct.toFixed(0)}%</title></circle>`).join('')}
+    <text x="${px}" y="${H - 6}" font-size="9" fill="#9a98b3">${escapeHtml(friendlyDate(pts[0].d))}</text>
+    <text x="${W - 10}" y="${H - 6}" font-size="9" fill="#9a98b3" text-anchor="end">${escapeHtml(friendlyDate(pts[pts.length - 1].d))}</text></svg>
+    <p class="hint">Running attendance after each day you logged lectures.</p>`;
 }
 
 /* =====================  TIMETABLE (faculty edits)  ===================== */
@@ -467,6 +501,49 @@ function renderDeadlines() {
   }).join('') : '<p class="muted">No deadlines posted yet.</p>';
 }
 
+/* =====================  POLISH: AT A GLANCE, BADGES, SHORTCUTS  ===================== */
+function renderGlance() {
+  if (!username) return;
+  const today = todayStr(), fac = isFaculty();
+  const slots = getTimetable().filter(s => s.day === dayOf(today));
+  const subs = getSubmitted(), upcoming = getDeadlines().filter(d => d.due >= today);
+  const openTodos = tdItems().filter(t => !t.done).length;
+  const card = (num, label, go) => `<button type="button" class="glance-item" data-glance="${go}"><b>${num}</b><small>${label}</small></button>`;
+  let html;
+  if (fac) {
+    html = card(slots.length, 'lectures today', 'register') + card(upcoming.length, 'upcoming deadlines posted', 'deadlines') + card(openTodos, 'open to-do tasks', 'todo');
+  } else {
+    const st = attendanceStats(username), p = predictor(st.A, st.T);
+    const logged = getAttendance().filter(r => r.student === username && r.date === today).length;
+    const due = upcoming.filter(d => !(subs[d.id] || []).includes(username) && daysLeft(d.due) <= 3).length;
+    html = card(`${logged}/${slots.length}`, 'lectures logged today', 'attendance')
+      + card(p.pct === null ? '—' : Math.round(p.pct) + '%', 'attendance (need 75%)', 'attendance')
+      + card(due, 'deadlines due in 3 days', 'deadlines') + card(openTodos, 'open to-do tasks', 'todo');
+  }
+  $('glance-items').innerHTML = html;
+  $('glance-date').textContent = friendlyDate(today).toUpperCase();
+}
+
+function updateBadges() {
+  const open = tdItems().filter(t => !t.done).length;
+  const subs = getSubmitted();
+  const due = getDeadlines().filter(d => daysLeft(d.due) >= 0 && daysLeft(d.due) <= 3 && (isFaculty() || !(subs[d.id] || []).includes(username))).length;
+  [['nav-todo-count', open], ['nav-dl-count', due]].forEach(([id, n]) => { $(id).textContent = n; $(id).hidden = n === 0; });
+}
+
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-glance]');
+  if (g) showSection(g.dataset.glance);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('announcement-modal').hidden) $('close-announcements').click();
+});
+$('toggle-pass').addEventListener('click', () => {
+  const show = $('password').type === 'password';
+  $('password').type = show ? 'text' : 'password';
+  $('toggle-pass').textContent = show ? 'Hide password' : 'Show password';
+});
+
 /* =====================  RENDER HOOK + EVENTS  ===================== */
 function renderAcademic(section) {
   if (!username) return;
@@ -478,6 +555,8 @@ function renderAcademic(section) {
   if (isFaculty()) {
     if (section === 'register') rgPrepare(); else renderRegister();
   }
+  renderGlance();
+  updateBadges();
 }
 
 document.addEventListener('click', e => {
