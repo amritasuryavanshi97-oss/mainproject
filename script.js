@@ -199,6 +199,8 @@ function renderAttendance() {
   }).join('') || '<tr><td colspan="5">No subjects yet. Ask faculty to set the timetable.</td></tr>';
 
   renderAttendanceCharts(st);
+  renderWhatIf(st);
+  renderCalendar();
   renderLectureLog();
 }
 
@@ -365,8 +367,8 @@ function renderRegister() {
     const own = att.find(r => r.student === st.id && r.date === date && r.slotId === slotId && r.markedBy === 'Student');
     return `<tr><td class="rownum">${i + 1}</td><td>${escapeHtml(st.roll)}</td><td><strong>${escapeHtml(st.name)}</strong></td>
       <td><button type="button" class="cell ${v === 'P' ? 'cell-p' : 'cell-a'}" data-rg-toggle="${st.id}">${v === 'P' ? 'Present' : 'Absent'}</button></td>
-      <td class="own-log">${own ? escapeHtml(own.status) : '—'}</td></tr>`;
-  }).join('') : '<tr><td colspan="5">No lecture selected.</td></tr>';
+      <td class="own-log">${own ? escapeHtml(own.status) : '—'}</td><td class="rg-actions"><button type="button" class="mini-btn" data-rg-edit="${st.id}">Edit</button><button type="button" class="mini-btn reject" data-rg-remove="${st.id}">Remove</button></td></tr>`;
+  }).join('') : '<tr><td colspan="6">No lecture selected.</td></tr>';
   const vals = Object.values(rgState), p = vals.filter(x => x === 'P').length, a = vals.length - p;
   $('rg-present').textContent = p;
   $('rg-absent').textContent = a;
@@ -376,6 +378,7 @@ function renderRegister() {
     const slot = getTimetable().find(s => s.id === slotId), eff = slot ? effectiveLecture(slot, date) : null;
     if (eff && eff.cancelled) $('rg-note').textContent = 'Note: this lecture is marked cancelled, so it will not count towards attendance.';
   }
+  renderDefaulters();
 }
 
 function rgSave() {
@@ -610,6 +613,112 @@ function buildTranscript() {
   catch (e) { window.open(doc.output('bloburl'), '_blank'); }   // fallback: open the PDF in a new tab
 }
 $('pdf-btn').addEventListener('click', generateTranscript);
+
+/* =====================  ATTENDANCE EXTRAS: WHAT-IF, CALENDAR, DEFAULTERS, CSV, CLASS LIST  ===================== */
+const byRoll = (a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true });
+const slugOf = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/* "What if I skip?" calculator (student) */
+function renderWhatIf(st) {
+  const sk = Math.max(0, parseInt($('wi-skip').value, 10) || 0), at = Math.max(0, parseInt($('wi-attend').value, 10) || 0);
+  const A = st.A + at, T = st.T + sk + at;
+  if (!T) { $('wi-result').textContent = 'Log some lectures first, then try a what-if.'; return; }
+  const p = predictor(A, T), below = 100 * A < PASS_PERCENT * T;
+  $('wi-result').innerHTML = `After skipping <b>${sk}</b> and attending <b>${at}</b>, your attendance would be <b>${p.pct.toFixed(1)}%</b> `
+    + (below ? `(<b>below</b> ${PASS_PERCENT}%). You would then need to attend <b>${p.need}</b> lecture(s) in a row to recover.`
+             : `(at or above ${PASS_PERCENT}%). You could still skip <b>${p.skip}</b> more after that.`);
+}
+['wi-skip', 'wi-attend'].forEach(id => $(id).addEventListener('input', () => { if (!isFaculty()) renderWhatIf(attendanceStats(username)); }));
+
+/* Month calendar: green = all attended, red = missed at least one, grey = no data */
+let calMonth = todayStr().slice(0, 7);
+function renderCalendar() {
+  const [y, m] = calMonth.split('-').map(Number), first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
+  $('cal-title').textContent = first.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const slots = getTimetable(), byDate = {};
+  getAttendance().filter(r => r.student === username && r.date.startsWith(calMonth)).forEach(r => {
+    const sl = slots.find(s => s.id === r.slotId);
+    if (!sl || r.status === 'Cancelled' || effectiveLecture(sl, r.date).cancelled) return;
+    const d = byDate[r.date] = byDate[r.date] || { A: 0, B: 0 };
+    if (r.status === 'Attended') d.A++; else d.B++;
+  });
+  let html = DAY_NAMES.map(d => `<b class="cal-h">${d}</b>`).join('') + '<i></i>'.repeat(first.getDay());
+  for (let d = 1; d <= days; d++) {
+    const ds = `${calMonth}-${String(d).padStart(2, '0')}`, v = byDate[ds];
+    html += `<span class="cal-day ${!v ? 'n' : v.B ? 'r' : 'g'}${ds === todayStr() ? ' today' : ''}" title="${v ? v.A + ' attended, ' + v.B + ' missed' : 'No data'}">${d}</span>`;
+  }
+  $('cal-grid').innerHTML = html;
+}
+function shiftMonth(n) { const [y, m] = calMonth.split('-').map(Number), d = new Date(y, m - 1 + n, 1); calMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); renderCalendar(); }
+$('cal-prev').addEventListener('click', () => shiftMonth(-1));
+$('cal-next').addEventListener('click', () => shiftMonth(1));
+
+/* Defaulter list (faculty) */
+function renderDefaulters() {
+  const rows = getRoster().map(s => { const st = attendanceStats(s.id), p = predictor(st.A, st.T); return { ...s, A: st.A, T: st.T, pct: p.pct, need: p.need, below: st.T > 0 && 100 * st.A < PASS_PERCENT * st.T }; })
+    .filter(r => r.below).sort((a, b) => a.pct - b.pct);
+  $('rg-defaulters').innerHTML = rows.length
+    ? `<div class="table-scroll"><table class="data-table"><thead><tr><th>ROLL</th><th>STUDENT</th><th>ATTENDED / HELD</th><th>PERCENT</th><th>MUST ATTEND</th></tr></thead><tbody>`
+      + rows.map(r => `<tr><td>${escapeHtml(r.roll)}</td><td><strong>${escapeHtml(r.name)}</strong></td><td>${r.A} / ${r.T}</td><td><span class="tag tag-bad">${r.pct.toFixed(1)}%</span></td><td>${r.need} in a row</td></tr>`).join('') + '</tbody></table></div>'
+    : '<p class="muted">No students are below 75% right now (or no attendance has been saved yet).</p>';
+}
+
+/* Export the open register as CSV */
+function downloadCsv(name, rows) {
+  const cell = v => { v = String(v); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };   // also blocks spreadsheet formula injection
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('rg-export').addEventListener('click', () => {
+  const date = $('rg-date').value, slot = getTimetable().find(s => s.id === $('rg-slot').value);
+  if (!slot) { toast('Choose a lecture first.'); return; }
+  downloadCsv(`attendance-${slot.code}-${date}.csv`, [['Date', 'Lecture', 'Roll no', 'Student', 'Status']]
+    .concat(getRoster().map(s => [date, slot.code + ' ' + slot.subject, s.roll, s.name, rgState[s.id] === 'A' ? 'Absent' : 'Present'])));
+});
+
+/* Edit / remove students in the register */
+document.addEventListener('click', e => {
+  if (!isFaculty()) return;
+  const ed = e.target.closest('[data-rg-edit]'), rm = e.target.closest('[data-rg-remove]');
+  const roster = getRoster();
+  if (ed) {
+    const st = roster.find(x => x.id === ed.dataset.rgEdit); if (!st) return;
+    const name = prompt('Student name', st.name); if (name === null) return;
+    const roll = prompt('Roll number', st.roll); if (roll === null) return;
+    if (!name.trim() || !roll.trim()) { toast('Name and roll number cannot be empty.'); return; }
+    if (roster.some(x => x.id !== st.id && x.roll === roll.trim())) { toast('That roll number is already used.'); return; }
+    st.name = name.trim(); st.roll = roll.trim();
+    save('cl_roster', roster.sort(byRoll)); renderRegister(); toast('Student updated.');
+  }
+  if (rm) {
+    const id = rm.dataset.rgRemove;
+    if (STUDENT_LOGINS.includes(id)) { toast('This student has a login account and cannot be removed.'); return; }
+    if (!confirm('Remove this student from the register?')) return;
+    save('cl_roster', roster.filter(x => x.id !== id)); delete rgState[id]; renderRegister(); toast('Student removed.');
+  }
+});
+
+/* Paste a whole class list: "09, Riya Nair" or "09 Riya Nair" (also works when pasted from a spreadsheet) */
+$('rg-paste-form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!isFaculty()) return;
+  const roster = getRoster();
+  let added = 0, skipped = 0;
+  $('rg-paste').value.split('\n').forEach(line => {
+    if (!line.trim()) return;
+    const m = line.trim().match(/^(\S+?)[\s,;]+(.+)$/);
+    if (!m || roster.some(s => s.roll === m[1])) { skipped++; return; }
+    let id = slugOf(m[2]) || 'student';
+    if (roster.some(s => s.id === id)) id += '-' + m[1];
+    roster.push({ id, roll: m[1], name: m[2].trim() }); added++;
+  });
+  save('cl_roster', roster.sort(byRoll));
+  $('rg-paste').value = '';
+  rgReload();
+  toast(`${added} student(s) added, ${skipped} line(s) skipped.`);
+});
 
 /* =====================  THEME (light / dark)  ===================== */
 function applyTheme(t) {
