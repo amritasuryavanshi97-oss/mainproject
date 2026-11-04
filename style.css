@@ -136,3 +136,24 @@
 .hbar-track u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#c64a64;text-decoration:none}
 .hbar b{text-align:right}
 .trend{width:100%;height:auto;display:block}
+
+/* ===== DARK MODE (toggle button bottom-right; choice is remembered) ===== */
+.theme-fab{position:fixed;right:18px;bottom:18px;z-index:60;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--white);box-shadow:var(--shadow);font-size:18px;cursor:pointer}
+html[data-theme="dark"]{color-scheme:dark;--ink:#e9eaf6;--muted:#a1a4be;--paper:#12131f;--white:#1b1d2e;--line:#2d3050;--shadow:0 12px 35px rgba(0,0,0,.35)}
+html[data-theme="dark"] .page-bg{background:radial-gradient(circle at 8% 10%,#2a1f4d 0,transparent 25%),radial-gradient(circle at 92% 90%,#13304a 0,transparent 25%)}
+html[data-theme="dark"] .topbar{background:rgba(27,29,46,.88);border-bottom-color:#2d3050}
+html[data-theme="dark"] :is(.panel,.sidebar,.modal-card,.login-panel,.event-card,.approval-row,.profile,.icon-btn,.demo-box,.filter-chip,.tiny-tag,.btn-outline,.sy-card,.tt-slot,.seg-btn,.filter-btns button){background:#1b1d2e;border-color:#2d3050;color:var(--ink)}
+html[data-theme="dark"] :is(.lecture-row,.tt-day,.topic-item,.deadline-card,.glance-item,.counter,.callout){background:#20233a;border-color:#2d3050;color:var(--ink)}
+html[data-theme="dark"] :is(input,select,textarea,.ctrl){background:#14152a;border-color:#2d3050;color:var(--ink)}
+html[data-theme="dark"] ::placeholder{color:#7a7d99}
+html[data-theme="dark"] :is(th,.data-table th,.sheet th,.rownum){background:#20233a;color:var(--muted)}
+html[data-theme="dark"] :is(td,.data-table td){border-color:#2a2d48}
+html[data-theme="dark"] .sheet tbody tr:nth-child(even){background:#1f2136}
+html[data-theme="dark"] .sheet tbody tr:hover{background:#262942}
+html[data-theme="dark"] :is(.bar,.hbar-track){background:#2a2d48}
+html[data-theme="dark"] .filter-btns button.on{background:#2c2660;color:#cfc6ff;border-color:#4b3fa8}
+html[data-theme="dark"] .nav-item:hover:not(.active){background:#262942}
+html[data-theme="dark"] :is(.leaflet-popup-content-wrapper,.leaflet-popup-tip){background:#1b1d2e;color:var(--ink)}
+html[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}
+/* pastel / gradient blocks keep their light-mode text colours */
+html[data-theme="dark"] :is(.stat-card,.welcome-banner,.login-art,.side-help,.milestone-note){--ink:#20233d;--muted:#777b92}
