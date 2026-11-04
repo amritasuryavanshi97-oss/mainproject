@@ -55,6 +55,8 @@
             <article class="stat-card stat-peach"><div class="stat-top"><span>Status</span><span class="stat-icon">🚦</span></div><div id="ac-status" class="ac-badge ac-neutral">No data yet</div><div class="stat-foot"><span>Keep it above 75%</span><span class="spark">✦</span></div></article>
           </div>
           <div id="ac-message" class="panel callout">Log your lectures below to see how many you can skip.</div>
+          <div class="panel whatif"><div class="panel-heading"><div><div class="eyebrow">PLAN AHEAD</div><h3>What if I skip?</h3></div></div><div class="ctrl-row"><label>I will skip <input id="wi-skip" type="number" min="0" value="1" class="ctrl wi-num"> lectures</label><label>and attend <input id="wi-attend" type="number" min="0" value="0" class="ctrl wi-num"> lectures</label></div><p id="wi-result" class="callout"></p></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">MONTH VIEW</div><h3>Attendance calendar</h3></div><div class="ctrl-row"><button type="button" id="cal-prev" class="btn btn-outline small-btn" aria-label="Previous month">‹</button><strong id="cal-title"></strong><button type="button" id="cal-next" class="btn btn-outline small-btn" aria-label="Next month">›</button></div></div><div id="cal-grid" class="cal-grid"></div><p class="hint"><span class="cal-key g"></span>all attended <span class="cal-key r"></span>missed at least one <span class="cal-key n"></span>no data</p></div>
           <div class="dashboard-grid ac-charts"><div class="panel"><div class="panel-heading"><div><div class="eyebrow">BY SUBJECT</div><h3>Attendance per subject</h3></div></div><div id="ac-chart-subjects"></div></div><div class="panel"><div class="panel-heading"><div><div class="eyebrow">OVER TIME</div><h3>Attendance trend</h3></div></div><div id="ac-chart-trend"></div></div></div>
           <div class="dashboard-grid">
             <div class="panel table-panel"><div class="table-tools"><h3>Subject-wise predictor</h3></div><div class="table-scroll"><table class="data-table"><thead><tr><th>SUBJECT</th><th>ATTENDED</th><th>TOTAL</th><th>PERCENT</th><th>PREDICTOR</th></tr></thead><tbody id="ac-subjects"></tbody></table></div></div>
@@ -72,11 +74,14 @@
               <button type="button" class="btn btn-outline small-btn" id="rg-all-present">Mark all present</button>
               <button type="button" class="btn btn-outline small-btn" id="rg-all-absent">Mark all absent</button>
               <button type="button" class="btn btn-primary small-btn" id="rg-save">Save register ↗</button>
+              <button type="button" class="btn btn-outline small-btn" id="rg-export">Export CSV ↓</button>
             </div>
             <div class="counters"><div class="counter"><b id="rg-present">0</b>Present</div><div class="counter"><b id="rg-absent">0</b>Absent</div><div class="counter"><b id="rg-total">0</b>Total</div><div class="counter"><b id="rg-percent">—</b>Present %</div></div>
             <p id="rg-note" class="hint"></p>
           </div>
-          <div class="panel table-panel" style="margin-top:17px"><div class="table-scroll sheet-scroll"><table class="data-table sheet"><thead><tr><th class="rownum">#</th><th>ROLL NO</th><th>STUDENT</th><th>STATUS (click to toggle)</th><th>STUDENT'S OWN LOG</th></tr></thead><tbody id="rg-body"></tbody></table></div></div>
+          <div class="panel table-panel" style="margin-top:17px"><div class="table-scroll sheet-scroll"><table class="data-table sheet"><thead><tr><th class="rownum">#</th><th>ROLL NO</th><th>STUDENT</th><th>STATUS (click to toggle)</th><th>STUDENT'S OWN LOG</th><th>ACTIONS</th></tr></thead><tbody id="rg-body"></tbody></table></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">ATTENDANCE SHORTAGE</div><h3>Defaulters (below 75%)</h3></div></div><div id="rg-defaulters"></div></div>
+          <form id="rg-paste-form" class="panel event-form" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">CLASS LIST</div><h3>Paste a whole class list</h3></div></div><label for="rg-paste">One student per line: roll number, then name</label><textarea id="rg-paste" rows="4" placeholder="09, Riya Nair&#10;10, Arjun Das"></textarea><button class="btn btn-primary full">Import list ＋</button></form>
           <form id="rg-add-form" class="panel event-form"><div class="panel-heading"><div><div class="eyebrow">CLASS LIST</div><h3>Add a student to the register</h3></div></div><div class="form-two"><div><label for="rg-roll">Roll number</label><input id="rg-roll" placeholder="e.g. 09" required></div><div><label for="rg-name">Student name</label><input id="rg-name" placeholder="e.g. Riya Nair" required></div></div><button class="btn btn-primary full">Add student <span>＋</span></button></form>
         </section>
 
