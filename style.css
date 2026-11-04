@@ -168,3 +168,19 @@ html[data-theme="dark"] :is(.stat-card,.welcome-banner,.login-art,.side-help,.mi
 .donut-legend li{display:flex;align-items:center;gap:8px}
 .donut-legend i{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 .donut-legend b{margin-left:auto;padding-left:12px}
+
+/* ===== WHAT-IF, CALENDAR, REGISTER TOOLS ===== */
+.whatif{margin-top:17px}
+.whatif label{display:flex;align-items:center;gap:8px}
+.wi-num{width:80px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;max-width:430px}
+.cal-h{text-align:center;font-size:10px;color:var(--muted)}
+.cal-day{aspect-ratio:1;display:grid;place-items:center;border-radius:10px;font-size:12px;font-weight:700}
+.cal-day.g,.cal-key.g{background:#def7eb;color:#24855f}
+.cal-day.r,.cal-key.r{background:#ffe3e8;color:#c64a64}
+.cal-day.n,.cal-key.n{background:#eeeef5;color:#8b8ea8}
+.cal-day.today{outline:2px solid var(--purple);outline-offset:1px}
+.cal-key{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 5px 0 12px}
+.rg-actions{white-space:nowrap}
+.rg-actions button{margin-right:6px}
+html[data-theme="dark"] :is(.cal-day.n,.cal-key.n){background:#2a2d48;color:#9a9db8}
