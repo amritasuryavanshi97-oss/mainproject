@@ -576,6 +576,11 @@ function renderPointsChart() {
 }
 
 function generateTranscript() {
+  try { buildTranscript(); }
+  catch (err) { console.error(err); toast('Could not create the PDF: ' + (err && err.message ? err.message : err)); }
+}
+
+function buildTranscript() {
   if (!window.jspdf) { toast('The PDF library did not load. Check your internet connection and try again.'); return; }
   const doc = new window.jspdf.jsPDF(), mine = myRecords(), approved = approvedPoints(mine);
   const head = { fillColor: [108, 85, 232] };
@@ -601,7 +606,8 @@ function generateTranscript() {
       body: st.list.filter(s => s.T).map(s => [s.code + ' ' + s.name, s.A, s.T, Math.round(s.A / s.T * 100) + '%']).concat([['Overall', st.A, st.T, Math.round(p.pct) + '%']])
     });
   }
-  doc.save('AICTE-Transcript-' + username + '.pdf');
+  try { doc.save('AICTE-Transcript-' + username + '.pdf'); toast('Transcript downloaded.'); }
+  catch (e) { window.open(doc.output('bloburl'), '_blank'); }   // fallback: open the PDF in a new tab
 }
 $('pdf-btn').addEventListener('click', generateTranscript);
 
