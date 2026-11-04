@@ -41,7 +41,7 @@ function openAnnouncements(){$('announcement-modal').hidden=false;renderAnnounce
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();const u=$('username').value.trim().toLowerCase(),p=$('password').value;$('login-error').hidden=true;try{const d=await api('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});localStorage.setItem('aicte_token',d.token);login(u)}catch(err){if(err.message.includes('Failed to fetch')){const valid=['aditi','student2','faculty'].includes(u)&&p==='demo123';if(valid){toast('Demo mode: start Java backend for server login.');login(u)}else{$('login-error').textContent='Use a demo account and password shown below.';$('login-error').hidden=false}}else{$('login-error').textContent=err.message;$('login-error').hidden=false}}});
 document.querySelectorAll('.demo-chip').forEach(b=>b.addEventListener('click',()=>{$('username').value=b.dataset.user;$('password').value='demo123'}));
 $('logout-btn').addEventListener('click',logout);document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.addEventListener('click',()=>showSection(b.dataset.section)));document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>showSection(b.dataset.go)));$('explore-btn').addEventListener('click',()=>showSection('activities'));$('announcement-btn').addEventListener('click',openAnnouncements);$('close-announcements').addEventListener('click',closeAnnouncements);$('announcement-modal').addEventListener('click',e=>{if(e.target===$('announcement-modal'))closeAnnouncements()});$('refresh-tip').addEventListener('click',()=>{renderTips();toast('Suggestion refreshed.')});
-$('event-form').addEventListener('submit',e=>{e.preventDefault();if(username!=='faculty')return;const duration=Number($('event-duration').value),qr=$('event-qr').value.trim();if(events().some(x=>x.qr.toLowerCase()===qr.toLowerCase())){toast('Use a unique event code.');return}const item={id:Date.now(),name:$('event-name').value.trim(),description:$('event-description').value.trim(),date:$('event-date').value,duration,venue:$('event-venue').value.trim()||'Campus venue',lat:Number($('event-lat').value),lon:Number($('event-lon').value),radius:Number($('event-radius').value)||100,qr,status:'Upcoming'};save('aicte_events',[...events(),item]);e.target.reset();$('event-duration').value=3;$('event-radius').value=100;$('event-lat').value='19.0760';$('event-lon').value='72.8777';setFacultyCoords(19.076,72.8777);render();toast('Event published! It now appears in the student portal.')});
+$('event-form').addEventListener('submit',e=>{e.preventDefault();if(username!=='faculty')return;const duration=Number($('event-duration').value),qr=$('event-qr').value.trim();if(events().some(x=>x.qr.toLowerCase()===qr.toLowerCase())){toast('Use a unique event code.');return}const item={id:Date.now(),name:$('event-name').value.trim(),description:$('event-description').value.trim(),date:$('event-date').value,duration,venue:$('event-venue').value.trim()||'Campus venue',lat:Number($('event-lat').value),lon:Number($('event-lon').value),radius:Number($('event-radius').value)||100,qr,category:$('event-category').value,status:'Upcoming'};save('aicte_events',[...events(),item]);e.target.reset();$('event-duration').value=3;$('event-radius').value=100;$('event-lat').value='19.0760';$('event-lon').value='72.8777';setFacultyCoords(19.076,72.8777);render();toast('Event published! It now appears in the student portal.')});
 $('student-search').addEventListener('input',renderFacultyRecords);$('student-event-select').addEventListener('change',()=>{const e=events().find(x=>String(x.id)===$('student-event-select').value);if(e)$('qr-code').value=e.qr});$('submit-qr').addEventListener('click',()=>{const code=$('qr-code').value.trim();const e=events().find(x=>x.qr.toLowerCase()===code.toLowerCase());if(!e){toast('Event code not recognised.');return}submitCheckin(e.id,code)});$('checkin-btn').addEventListener('click',async()=>{const e=events().find(x=>String(x.id)===$('student-event-select').value)||events().find(x=>x.status!=='Completed');if(!e){$('location-status').textContent='No event available to check yet.';return}await verifyLocation(e)});$('locate-map').addEventListener('click',async()=>{try{const pos=await getPosition();if(studentMap){studentMap.setView([pos.coords.latitude,pos.coords.longitude],16);if(userMarker)userMarker.setLatLng([pos.coords.latitude,pos.coords.longitude]);else userMarker=L.circleMarker([pos.coords.latitude,pos.coords.longitude],{radius:8,color:'#ff936b',fillColor:'#ff936b',fillOpacity:.9}).addTo(studentMap).bindPopup('Your location')}}catch{toast('Allow location access to show your position on the map.')}});
 $('use-current-location').addEventListener('click',async()=>{try{const pos=await getPosition();setFacultyCoords(pos.coords.latitude,pos.coords.longitude);$('faculty-map-status').textContent='Using your current location as the event venue. Confirm this is the intended venue before publishing.'}catch{toast('Allow location access to use your current position.')}});
 $('event-lat').addEventListener('change',updateMapMarkers);$('event-lon').addEventListener('change',updateMapMarkers);
@@ -544,6 +544,67 @@ $('toggle-pass').addEventListener('click', () => {
   $('toggle-pass').textContent = show ? 'Hide password' : 'Show password';
 });
 
+/* =====================  POINTS BY CATEGORY + PDF TRANSCRIPT  ===================== */
+const CAT_COLORS = ['#6c55e8', '#ff936b', '#4cc49a', '#4c9cf6', '#ff80b5', '#ffd95b', '#8976ff'];
+// Category comes from the event the record belongs to (older events show as "General")
+function catOf(r) {
+  const ev = events().find(x => x.id === r.eventId);
+  return (ev && ev.category) || r.category || 'General';
+}
+function pointsByCategory() {
+  const totals = {};
+  myRecords().filter(r => r.status === 'Approved').forEach(r => { const c = catOf(r); totals[c] = (totals[c] || 0) + Number(r.points || 0); });
+  return Object.entries(totals).filter(([, v]) => v > 0);
+}
+
+function renderPointsChart() {
+  const wrap = $('pts-charts');
+  wrap.hidden = isFaculty();
+  if (isFaculty()) return;
+  const data = pointsByCategory(), total = data.reduce((s, [, v]) => s + v, 0);
+  if (!total) { $('pts-chart').innerHTML = '<p class="muted">No approved points yet. They appear here once faculty approves your activities.</p>'; return; }
+  const R = 70, C = 2 * Math.PI * R;
+  let offset = 0;
+  const arcs = data.map(([c, v], i) => {
+    const len = v / total * C;
+    const arc = `<circle cx="90" cy="90" r="${R}" fill="none" stroke="${CAT_COLORS[i % CAT_COLORS.length]}" stroke-width="26" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}"><title>${escapeHtml(c)}: ${v}</title></circle>`;
+    offset += len;
+    return arc;
+  }).join('');
+  const legend = data.map(([c, v], i) => `<li><i style="background:${CAT_COLORS[i % CAT_COLORS.length]}"></i>${escapeHtml(c)} <b>${v}</b></li>`).join('');
+  $('pts-chart').innerHTML = `<div class="donut-wrap"><svg viewBox="0 0 180 180" class="donut" role="img" aria-label="Approved points by category"><g transform="rotate(-90 90 90)">${arcs}</g><text x="90" y="92" text-anchor="middle" class="donut-num">${total}</text><text x="90" y="108" text-anchor="middle" class="donut-sub">of 100 points</text></svg><ul class="donut-legend">${legend}</ul></div>`;
+}
+
+function generateTranscript() {
+  if (!window.jspdf) { toast('The PDF library did not load. Check your internet connection and try again.'); return; }
+  const doc = new window.jspdf.jsPDF(), mine = myRecords(), approved = approvedPoints(mine);
+  const head = { fillColor: [108, 85, 232] };
+  doc.setFontSize(20); doc.text('AICTE Activity Transcript', 14, 20);
+  doc.setFontSize(11);
+  doc.text('Student: ' + displayName(username), 14, 30);
+  doc.text('Generated: ' + new Date().toLocaleDateString('en-IN'), 14, 36);
+  doc.text(`Approved points: ${approved} / 100 (${Math.max(100 - approved, 0)} remaining)`, 14, 42);
+  doc.autoTable({
+    startY: 50, headStyles: head, head: [['Activity', 'Category', 'Date', 'Hours', 'Points', 'Status']],
+    body: mine.length ? mine.map(r => [r.event, catOf(r), r.date || '-', Number(r.duration) || 0, Number(r.points) || 0, r.status]) : [['No records yet', '', '', '', '', '']]
+  });
+  let y = doc.lastAutoTable.finalY + 10;
+  const cats = pointsByCategory();
+  if (cats.length) {
+    doc.autoTable({ startY: y, headStyles: head, tableWidth: 90, head: [['Category', 'Approved points']], body: cats.map(([c, v]) => [c, v]) });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+  const st = attendanceStats(username), p = predictor(st.A, st.T);
+  if (st.T) {
+    doc.autoTable({
+      startY: y, headStyles: head, head: [['Subject', 'Attended', 'Held', 'Percent']],
+      body: st.list.filter(s => s.T).map(s => [s.code + ' ' + s.name, s.A, s.T, Math.round(s.A / s.T * 100) + '%']).concat([['Overall', st.A, st.T, Math.round(p.pct) + '%']])
+    });
+  }
+  doc.save('AICTE-Transcript-' + username + '.pdf');
+}
+$('pdf-btn').addEventListener('click', generateTranscript);
+
 /* =====================  THEME (light / dark)  ===================== */
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
@@ -567,6 +628,7 @@ function renderAcademic(section) {
   }
   renderGlance();
   updateBadges();
+  renderPointsChart();
 }
 
 document.addEventListener('click', e => {
