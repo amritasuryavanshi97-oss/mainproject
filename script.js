@@ -544,6 +544,16 @@ $('toggle-pass').addEventListener('click', () => {
   $('toggle-pass').textContent = show ? 'Hide password' : 'Show password';
 });
 
+/* =====================  THEME (light / dark)  ===================== */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $('theme-toggle').textContent = t === 'dark' ? '☀️' : '🌙';
+  $('theme-toggle').setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  try { localStorage.setItem('cl_theme', t); } catch (e) { /* storage blocked: theme just won't be remembered */ }
+}
+$('theme-toggle').addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+applyTheme(localStorage.getItem('cl_theme') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+
 /* =====================  RENDER HOOK + EVENTS  ===================== */
 function renderAcademic(section) {
   if (!username) return;
