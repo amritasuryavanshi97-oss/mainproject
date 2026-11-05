@@ -14,9 +14,9 @@ function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','
 function dateParts(value){if(!value)return{day:'--',month:'TBA'};const d=new Date(value+'T12:00:00');return{day:d.getDate(),month:d.toLocaleString('en',{month:'short'})}}
 function statusClass(status){return status==='Approved'?'status-approved':status==='Rejected'?'status-rejected':''}
 async function api(path, options={}) {const token=localStorage.getItem('aicte_token');const headers={...(options.headers||{})};if(token)headers.Authorization='Bearer '+token;const r=await fetch(API+path,{...options,headers});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.message||'Request failed');return d}
-function login(usernameValue){username=usernameValue;localStorage.setItem('aicte_username',username);$('login-view').hidden=true;$('dashboard-view').hidden=false;$('profile-name').textContent=displayName(username);$('profile-role').textContent=username==='faculty'?'Faculty':'Student';$('avatar').textContent=initials(username);$('role-label').textContent=username==='faculty'?'FACULTY WORKSPACE':'STUDENT SPACE';$('page-title').textContent='Your overview';$('welcome-title').innerHTML=`Hey ${escapeHtml(displayName(username).split(' ')[0])}, ready to grow? <span>✌</span>`;document.querySelectorAll('.faculty-nav').forEach(el=>el.hidden=username!=='faculty');document.querySelectorAll('.student-nav').forEach(el=>el.hidden=username==='faculty');$('records-section').querySelector('.page-intro h2').textContent=username==='faculty'?'Activity records':'My activity records';if(username==='faculty'){$('welcome-kicker').textContent='YOUR CAMPUS, YOUR IMPACT'}render();showSection('overview');setTimeout(initMaps,180);if(username!=='faculty'&&!sessionStorage.getItem('announcementsShown')){sessionStorage.setItem('announcementsShown','1');setTimeout(()=>openAnnouncements(),700)}}
+function login(usernameValue){username=usernameValue;localStorage.setItem('aicte_username',username);$('login-view').hidden=true;$('dashboard-view').hidden=false;$('profile-name').textContent=displayName(username);$('profile-role').textContent=username==='faculty'?'Faculty':'Student';$('avatar').textContent=initials(username);$('role-label').textContent=username==='faculty'?'FACULTY WORKSPACE':'STUDENT SPACE';$('page-title').textContent='Your overview';$('welcome-title').innerHTML=`Hey ${escapeHtml(displayName(username).split(' ')[0])}, ready to grow? <span>✌</span>`;document.querySelectorAll('.faculty-nav').forEach(el=>el.hidden=username!=='faculty');document.querySelectorAll('.student-nav').forEach(el=>el.hidden=username==='faculty');applyRoleLayout();$('records-section').querySelector('.page-intro h2').textContent=username==='faculty'?'Activity records':'My activity records';if(username==='faculty'){$('welcome-kicker').textContent='YOUR CAMPUS, YOUR IMPACT'}render();showSection('overview');setTimeout(initMaps,180);if(username!=='faculty'&&!sessionStorage.getItem('announcementsShown')){sessionStorage.setItem('announcementsShown','1');setTimeout(()=>openAnnouncements(),700)}}
 function logout(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('camera').hidden=true;localStorage.removeItem('aicte_token');localStorage.removeItem('aicte_username');username='';$('dashboard-view').hidden=true;$('login-view').hidden=false}
-function showSection(section){document.querySelectorAll('.page-section').forEach(s=>s.hidden=s.id!==section+'-section');document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));const titles={overview:'Your overview',activities:'Explore activities',records:username==='faculty'?'Activity records':'My activity records',students:'Student records',manage:'Manage events',attendance:'Attendance & bunk predictor',register:'Attendance register',timetable:'Class timetable',syllabus:username==='faculty'?'Syllabus coverage':'My syllabus tracker',todo:'To-do list',deadlines:'Submission deadlines'};$('page-title').textContent=titles[section]||'Your overview';if(section==='overview'||section==='manage')setTimeout(()=>{if(studentMap)studentMap.invalidateSize();if(facultyMap)facultyMap.invalidateSize()},150);if(section==='activities')renderEventCards();renderAcademic(section);}
+function showSection(section){document.querySelectorAll('.page-section').forEach(s=>s.hidden=s.id!==section+'-section');document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));const titles={overview:'Your overview',activities:username==='faculty'?'Activity details':'Explore activities',records:username==='faculty'?'Activity records':'My activity records',students:'Student records',manage:'Manage events',attendance:'Attendance & bunk predictor',register:'Attendance register',timetable:'Class timetable',syllabus:username==='faculty'?'Syllabus coverage':'My syllabus tracker',todo:'To-do list',deadlines:'Submission deadlines'};$('page-title').textContent=titles[section]||'Your overview';if(section==='overview'||section==='manage')setTimeout(()=>{if(studentMap)studentMap.invalidateSize();if(facultyMap)facultyMap.invalidateSize()},150);if(section==='activities')renderEventCards();renderAcademic(section);}
 function render(){renderOverview();renderAnnouncements();renderEventCards();renderMyRecords();renderFacultyRecords();renderManageEvents();renderTips();updateNavCount();populateEventSelect();updateMapMarkers();renderAcademic()}
 function myRecords(){return records().filter(r=>r.student===username)}
 function approvedPoints(list){return list.filter(r=>r.status==='Approved').reduce((sum,r)=>sum+Number(r.points||0),0)}
@@ -720,6 +720,33 @@ $('rg-paste-form').addEventListener('submit', e => {
   toast(`${added} student(s) added, ${skipped} line(s) skipped.`);
 });
 
+/* =====================  FACULTY VIEW TWEAKS  ===================== */
+function applyRoleLayout() {
+  const fac = username === 'faculty';
+  document.querySelectorAll('.student-only').forEach(el => { el.hidden = fac; });
+  const grid = document.querySelector('#overview-section .stats-grid');
+  if (grid) grid.style.gridTemplateColumns = fac ? 'repeat(2,minmax(0,1fr))' : '';
+  const lower = document.querySelector('#overview-section .lower-grid');
+  if (lower) lower.style.gridTemplateColumns = fac ? '1fr' : '';
+  $('act-eyebrow').textContent = fac ? 'ACTIVITY DETAILS' : 'GET INVOLVED';
+  $('act-title').textContent = fac ? 'Activities you have added 📋' : 'Find your next thing ✨';
+  $('act-sub').textContent = fac ? 'Details and check-in numbers for every activity you publish.' : 'Pick an activity, show up, and let your participation count.';
+}
+
+// Faculty see information about each activity instead of the student check-in cards
+function renderActivityInfo() {
+  const list = events(), recs = records();
+  $('all-activities').innerHTML = list.length ? list.map(e => {
+    const mine = recs.filter(r => r.eventId === e.id), n = s => mine.filter(r => r.status === s).length;
+    return `<article class="act-info"><h4>${escapeHtml(e.name)}</h4><p>${escapeHtml(e.description || 'No description added.')}</p>
+      <dl class="act-facts"><div><dt>CATEGORY</dt><dd>${escapeHtml(e.category || 'General')}</dd></div><div><dt>DATE</dt><dd>${escapeHtml(friendlyDate(e.date))}</dd></div>
+      <div><dt>DURATION</dt><dd>${Number(e.duration) || 0} hour(s)</dd></div><div><dt>VENUE</dt><dd>${escapeHtml(e.venue || '')}</dd></div>
+      <div><dt>ALLOWED RADIUS</dt><dd>${Number(e.radius) || 0} m</dd></div><div><dt>EVENT CODE</dt><dd>${escapeHtml(e.qr || '')}</dd></div></dl>
+      <div class="act-counts"><span class="tag tag-good">${n('Approved')} approved</span><span class="tag tag-warn">${n('Pending')} pending</span><span class="tag tag-bad">${n('Rejected')} rejected</span></div></article>`;
+  }).join('') : '<p class="muted">You have not added any activities yet. Use Manage events to publish one.</p>';
+  $('activity-total').textContent = list.length + (list.length === 1 ? ' activity' : ' activities');
+}
+
 /* =====================  THEME (light / dark)  ===================== */
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
@@ -744,6 +771,7 @@ function renderAcademic(section) {
   renderGlance();
   updateBadges();
   renderPointsChart();
+  if (isFaculty()) renderActivityInfo();
 }
 
 document.addEventListener('click', e => {
