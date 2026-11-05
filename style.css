@@ -184,3 +184,13 @@ html[data-theme="dark"] :is(.stat-card,.welcome-banner,.login-art,.side-help,.mi
 .rg-actions{white-space:nowrap}
 .rg-actions button{margin-right:6px}
 html[data-theme="dark"] :is(.cal-day.n,.cal-key.n){background:#2a2d48;color:#9a9db8}
+
+/* ===== FACULTY: ACTIVITY INFORMATION CARDS ===== */
+.stats-grid.faculty-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.act-info{background:var(--white);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.act-info h4{margin:0 0 4px;font:800 16px 'Plus Jakarta Sans',sans-serif}
+.act-info p{color:var(--muted);margin:6px 0 14px;font-size:12px;line-height:1.6}
+.act-facts{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:0 0 14px;font-size:12px}
+.act-facts dt{color:var(--muted);font-size:10px;letter-spacing:.6px}
+.act-facts dd{margin:2px 0 0;font-weight:700;overflow-wrap:anywhere}
+.act-counts{display:flex;gap:6px;flex-wrap:wrap}
