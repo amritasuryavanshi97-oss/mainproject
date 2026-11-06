@@ -194,3 +194,29 @@ html[data-theme="dark"] :is(.cal-day.n,.cal-key.n){background:#2a2d48;color:#9a9
 .act-facts dt{color:var(--muted);font-size:10px;letter-spacing:.6px}
 .act-facts dd{margin:2px 0 0;font-weight:700;overflow-wrap:anywhere}
 .act-counts{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ===== FACULTY DASHBOARD ===== */
+.stats-grid.fac-stats,.stats-grid.faculty-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fac-gap{margin-top:17px}
+.attn-item{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:12px;background:#fff7d9;border:1px solid #ffedab;color:#7a6a2c;font-weight:700;font-size:12px;cursor:pointer}
+.big-stat{font:800 30px 'Plus Jakarta Sans',sans-serif;margin:0 0 14px}
+.big-stat small{font:600 11px 'DM Sans',sans-serif;color:var(--muted)}
+.report-btns{display:flex;gap:8px;flex-wrap:wrap}
+#student-records tr{cursor:pointer}
+#profile-body h2{margin:6px 0 10px}
+#profile-body h3{margin:12px 0 6px;font-size:14px}
+#profile-body ul{margin:0;padding-left:18px;line-height:1.8;font-size:12px}
+html[data-theme="dark"] .attn-item{background:#3a3320;border-color:#5a4d24;color:#f1dc8c}
+@media(max-width:760px){.stats-grid.fac-stats,.stats-grid.faculty-stats{grid-template-columns:1fr}}
+
+/* ===== COMBINED CALENDAR ===== */
+.cc-grid .cal-day{aspect-ratio:auto;min-height:54px;border:0;cursor:pointer;background:#f6f5fb;color:var(--ink);align-content:center;font-family:inherit}
+.cc-grid .cal-day.sel{outline:2px solid var(--purple);outline-offset:1px}
+.dots{display:flex;gap:3px;font-style:normal;margin-top:4px;min-height:6px}
+.dots i{width:6px;height:6px;border-radius:50%}
+.dots .dl,.cal-key.l{background:#6c55e8}
+.dots .dd,.cal-key.d{background:#c64a64}
+.dots .de,.cal-key.e{background:#24855f}
+.cc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 13px;margin-bottom:8px;border:1px solid #efedf7;border-radius:12px;background:#fbfaff;flex-wrap:wrap;font-size:12px}
+.cc-row small{color:var(--muted)}
+html[data-theme="dark"] :is(.cc-grid .cal-day,.cc-row){background:#20233a;border-color:#2d3050}
