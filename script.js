@@ -16,7 +16,7 @@ function statusClass(status){return status==='Approved'?'status-approved':status
 async function api(path, options={}) {const token=localStorage.getItem('aicte_token');const headers={...(options.headers||{})};if(token)headers.Authorization='Bearer '+token;const r=await fetch(API+path,{...options,headers});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.message||'Request failed');return d}
 function login(usernameValue){username=usernameValue;localStorage.setItem('aicte_username',username);$('login-view').hidden=true;$('dashboard-view').hidden=false;$('profile-name').textContent=displayName(username);$('profile-role').textContent=username==='faculty'?'Faculty':'Student';$('avatar').textContent=initials(username);$('role-label').textContent=username==='faculty'?'FACULTY WORKSPACE':'STUDENT SPACE';$('page-title').textContent='Your overview';$('welcome-title').innerHTML=`Hey ${escapeHtml(displayName(username).split(' ')[0])}, ready to grow? <span>✌</span>`;document.querySelectorAll('.faculty-nav').forEach(el=>el.hidden=username!=='faculty');document.querySelectorAll('.student-nav').forEach(el=>el.hidden=username==='faculty');applyRoleLayout();$('records-section').querySelector('.page-intro h2').textContent=username==='faculty'?'Activity records':'My activity records';if(username==='faculty'){$('welcome-kicker').textContent='YOUR CAMPUS, YOUR IMPACT'}render();showSection('overview');setTimeout(initMaps,180);if(username!=='faculty'&&!sessionStorage.getItem('announcementsShown')){sessionStorage.setItem('announcementsShown','1');setTimeout(()=>openAnnouncements(),700)}}
 function logout(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('camera').hidden=true;localStorage.removeItem('aicte_token');localStorage.removeItem('aicte_username');username='';$('dashboard-view').hidden=true;$('login-view').hidden=false}
-function showSection(section){document.querySelectorAll('.page-section').forEach(s=>s.hidden=s.id!==section+'-section');document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));const titles={overview:'Your overview',activities:username==='faculty'?'Activity details':'Explore activities',records:username==='faculty'?'Activity records':'My activity records',students:'Student records',manage:'Manage events',attendance:'Attendance & bunk predictor',register:'Attendance register',timetable:'Class timetable',syllabus:username==='faculty'?'Syllabus coverage':'My syllabus tracker',todo:'To-do list',deadlines:'Submission deadlines'};$('page-title').textContent=titles[section]||'Your overview';if(section==='overview'||section==='manage')setTimeout(()=>{if(studentMap)studentMap.invalidateSize();if(facultyMap)facultyMap.invalidateSize()},150);if(section==='activities')renderEventCards();renderAcademic(section);}
+function showSection(section){document.querySelectorAll('.page-section').forEach(s=>s.hidden=s.id!==section+'-section');document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===section));const titles={overview:'Your overview',activities:username==='faculty'?'Activity details':'Explore activities',records:username==='faculty'?'Activity records':'My activity records',students:'Student records',manage:'Manage events',attendance:'Attendance & bunk predictor',register:'Attendance register',calendar:'Combined calendar',timetable:'Class timetable',syllabus:username==='faculty'?'Syllabus coverage':'My syllabus tracker',todo:'To-do list',deadlines:'Submission deadlines'};$('page-title').textContent=titles[section]||'Your overview';if(section==='overview'||section==='manage')setTimeout(()=>{if(studentMap)studentMap.invalidateSize();if(facultyMap)facultyMap.invalidateSize()},150);if(section==='activities')renderEventCards();renderAcademic(section);}
 function render(){renderOverview();renderAnnouncements();renderEventCards();renderMyRecords();renderFacultyRecords();renderManageEvents();renderTips();updateNavCount();populateEventSelect();updateMapMarkers();renderAcademic()}
 function myRecords(){return records().filter(r=>r.student===username)}
 function approvedPoints(list){return list.filter(r=>r.status==='Approved').reduce((sum,r)=>sum+Number(r.points||0),0)}
@@ -724,7 +724,8 @@ $('rg-paste-form').addEventListener('submit', e => {
 function applyRoleLayout() {
   const fac = username === 'faculty';
   document.querySelectorAll('.student-only').forEach(el => { el.hidden = fac; });
-  const grid = document.querySelector('#overview-section .stats-grid');
+  document.querySelectorAll('.faculty-only').forEach(el => { el.hidden = !fac; });
+  const grid = document.querySelector('#overview-section > .stats-grid');
   if (grid) grid.style.gridTemplateColumns = fac ? 'repeat(2,minmax(0,1fr))' : '';
   const lower = document.querySelector('#overview-section .lower-grid');
   if (lower) lower.style.gridTemplateColumns = fac ? '1fr' : '';
@@ -746,6 +747,146 @@ function renderActivityInfo() {
   }).join('') : '<p class="muted">You have not added any activities yet. Use Manage events to publish one.</p>';
   $('activity-total').textContent = list.length + (list.length === 1 ? ' activity' : ' activities');
 }
+
+/* =====================  FACULTY DASHBOARD  ===================== */
+function classStats() {
+  return getRoster().map(s => { const st = attendanceStats(s.id), p = predictor(st.A, st.T); return { ...s, st, pct: p.pct, need: p.need, below: st.T > 0 && 100 * st.A < PASS_PERCENT * st.T }; });
+}
+const barRow = (label, title, pct, cls, text, marker) => `<div class="hbar"><span class="hbar-label">${escapeHtml(label)}</span><div class="hbar-track" title="${escapeHtml(title)}"><i class="${cls}" style="width:${pct}%"></i>${marker ? `<u style="left:${PASS_PERCENT}%"></u>` : ''}</div><b>${text}</b></div>`;
+
+function renderFacDash() {
+  const today = todayStr(), rows = classStats(), below = rows.filter(r => r.below), withData = rows.filter(r => r.pct !== null);
+  const avg = withData.length ? withData.reduce((s, r) => s + r.pct, 0) / withData.length : null;
+  const slots = sortedSlots(getTimetable()).filter(s => s.day === dayOf(today)), att = getAttendance();
+  const state = s => effectiveLecture(s, today).cancelled ? 'cancelled' : att.some(r => r.date === today && r.slotId === s.id && r.markedBy === 'Faculty') ? 'saved' : 'open';
+  const dueWeek = getDeadlines().filter(d => daysLeft(d.due) >= 0 && daysLeft(d.due) <= 6).length;
+  const pending = records().filter(r => r.status === 'Pending').length;
+  const avgText = avg === null ? '—' : avg.toFixed(0) + '%';
+
+  $('fd-below').textContent = below.length; $('fd-today').textContent = slots.length; $('fd-deadlines').textContent = dueWeek; $('fr-avg').textContent = avgText;
+
+  const items = [];
+  slots.filter(s => state(s) === 'open').forEach(s => items.push(['register', `Register for ${s.code} at ${s.start} not saved yet`]));
+  if (pending) items.push(['students', `${pending} request(s) waiting for approval`]);
+  if (below.length) items.push(['register', `${below.length} student(s) below ${PASS_PERCENT}%`]);
+  if (dueWeek) items.push(['deadlines', `${dueWeek} deadline(s) due this week`]);
+  $('fd-attention').innerHTML = items.length ? items.map(([go, t]) => `<button type="button" class="attn-item" data-glance="${go}"><span>${escapeHtml(t)}</span><span>→</span></button>`).join('') : '<p class="muted">You are all caught up 🎉</p>';
+
+  const tag = { saved: '<span class="tag tag-good">Register saved</span>', open: '<span class="tag tag-warn">Not marked yet</span>', cancelled: '<span class="tag tag-bad">Cancelled</span>' };
+  $('fd-today-list').innerHTML = slots.length ? slots.map(s => `<div class="lecture-row"><div class="lecture-info"><strong>${escapeHtml(s.start)}–${escapeHtml(s.end)} · ${escapeHtml(s.subject)}</strong><small>${escapeHtml(s.code)}</small><div>${tag[state(s)]}</div></div><button type="button" class="btn btn-outline small-btn" data-take="${s.id}">Open register</button></div>`).join('') : '<p class="muted">No lectures scheduled today.</p>';
+
+  $('fd-class').innerHTML = `<p class="big-stat">${avgText} <small>class average</small></p>` + subjectsList().map(sub => {
+    let A = 0, T = 0;
+    rows.forEach(r => { const x = r.st.list.find(y => y.code === sub.code); if (x) { A += x.A; T += x.T; } });
+    const pct = T ? A / T * 100 : 0;
+    return barRow(sub.code, sub.name, pct, !T ? 'none' : pct < PASS_PERCENT ? 'bad' : 'good', T ? Math.round(pct) + '%' : '—', true);
+  }).join('');
+
+  const syl = read('cl_fsyllabus', {});
+  $('fd-syllabus').innerHTML = subjectsList().map(sub => {
+    const l = syl[sub.code] || [], d = l.filter(t => t.done).length, p = l.length ? d / l.length * 100 : 0;
+    return barRow(sub.code, `${sub.name}: ${d}/${l.length} topics`, p, l.length ? 'good' : 'none', l.length ? Math.round(p) + '%' : '—', false);
+  }).join('') || '<p class="muted">Add subjects in the timetable first.</p>';
+}
+
+function takeAttendance(slotId) {
+  const today = todayStr(), now = new Date().toTimeString().slice(0, 5);
+  const slots = sortedSlots(getTimetable()).filter(s => s.day === dayOf(today));
+  const id = slotId || (slots.find(s => s.end >= now) || slots[0] || {}).id;
+  $('rg-date').value = today;
+  showSection('register');
+  if (id) { $('rg-slot').value = id; rgReload(); } else toast('No lectures today. Pick a date in the register.');
+}
+
+/* CSV reports */
+function downloadReport(kind) {
+  const rows = classStats(), d = todayStr(), pct = r => r.pct === null ? '' : r.pct.toFixed(1);
+  if (kind === 'class') downloadCsv(`class-attendance-${d}.csv`, [['Roll no', 'Student', 'Attended', 'Held', 'Percent', 'Status']]
+    .concat(rows.map(r => [r.roll, r.name, r.st.A, r.st.T, pct(r), r.st.T ? (r.below ? 'Below 75%' : 'OK') : 'No data'])));
+  if (kind === 'defaulters') downloadCsv(`defaulters-${d}.csv`, [['Roll no', 'Student', 'Attended', 'Held', 'Percent', 'Must attend in a row']]
+    .concat(rows.filter(r => r.below).map(r => [r.roll, r.name, r.st.A, r.st.T, pct(r), r.need])));
+  if (kind === 'points') {
+    const by = {};
+    records().forEach(r => { const o = by[r.student] = by[r.student] || { name: displayName(r.student), pts: 0, ok: 0, wait: 0 }; if (r.status === 'Approved') { o.pts += Number(r.points || 0); o.ok++; } if (r.status === 'Pending') o.wait++; });
+    downloadCsv(`aicte-points-${d}.csv`, [['Student', 'Approved points', 'Approved activities', 'Pending']].concat(Object.values(by).map(o => [o.name, o.pts, o.ok, o.wait])));
+  }
+}
+
+/* Notices: faculty post, students read them in the announcements popup */
+function renderNotices() {
+  const list = read('cl_notices').slice().reverse();
+  $('modal-notices').innerHTML = list.length ? '<div class="eyebrow" style="margin-top:12px">NOTICES FROM FACULTY</div>' + list.map(n => `<div class="callout" style="margin:8px 0 0"><strong>📣 ${escapeHtml(n.text)}</strong><br><small>Posted ${escapeHtml(friendlyDate(n.at))}</small></div>`).join('') : '';
+  $('fd-notices').innerHTML = list.length ? list.map(n => `<div class="approval-row"><div><strong>${escapeHtml(n.text)}</strong><small>${escapeHtml(friendlyDate(n.at))}</small></div><button type="button" class="mini-btn reject" data-notice-del="${n.id}">Delete</button></div>`).join('') : '<p class="muted">No notices posted yet.</p>';
+}
+$('notice-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const text = $('notice-text').value.trim();
+  if (!isFaculty() || !text) return;
+  save('cl_notices', [...read('cl_notices'), { id: uid(), text, at: todayStr() }]);
+  $('notice-text').value = ''; renderNotices(); toast('Notice posted. Students will see it under announcements.');
+});
+
+/* Student profile popup (click a row in Student records) */
+function openProfile(tr) {
+  const u = STUDENT_LOGINS.find(x => tr.textContent.includes(displayName(x)));
+  if (!u) { toast('A detailed profile is only available for students with a login.'); return; }
+  const st = attendanceStats(u), p = predictor(st.A, st.T), recs = records().filter(r => r.student === u), subs = getSubmitted();
+  const attRows = st.list.filter(s => s.T).map(s => `<tr><td>${escapeHtml(s.code + ' ' + s.name)}</td><td>${s.A}/${s.T}</td><td>${Math.round(s.A / s.T * 100)}%</td></tr>`).join('');
+  const dl = getDeadlines().map(d => `<li>${escapeHtml(d.title)}: ${(subs[d.id] || []).includes(u) ? '✓ submitted' : 'not submitted'}</li>`).join('');
+  $('profile-body').innerHTML = `<div class="eyebrow">STUDENT PROFILE</div><h2>${escapeHtml(displayName(u))}</h2>
+    <h3>Attendance: ${p.pct === null ? 'no data yet' : p.pct.toFixed(1) + '%'}</h3>${attRows ? `<table class="data-table"><tbody>${attRows}</tbody></table>` : ''}
+    <h3>AICTE points: ${approvedPoints(recs)} / 100</h3><p class="muted">${recs.filter(r => r.status === 'Approved').length} approved, ${recs.filter(r => r.status === 'Pending').length} pending</p>
+    <h3>Deadlines</h3>${dl ? `<ul>${dl}</ul>` : '<p class="muted">No deadlines posted.</p>'}`;
+  $('profile-modal').hidden = false;
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('profile-modal').hidden = true; });
+
+document.addEventListener('click', e => {
+  const t = e.target, take = t.closest('[data-take]'), rep = t.closest('[data-report]'), nd = t.closest('[data-notice-del]');
+  if (take) takeAttendance(take.dataset.take);
+  if (t.closest('#fd-take')) takeAttendance();
+  if (t.closest('#fd-create')) showSection('manage');
+  if (rep) downloadReport(rep.dataset.report);
+  if (nd && isFaculty()) { save('cl_notices', read('cl_notices').filter(n => n.id !== nd.dataset.noticeDel)); renderNotices(); }
+  if (t.closest('[data-close-profile]') || t.id === 'profile-modal') $('profile-modal').hidden = true;
+  const tr = t.closest('#student-records tr');
+  if (tr && isFaculty()) openProfile(tr);
+});
+
+/* =====================  COMBINED CALENDAR (lectures + deadlines + events)  ===================== */
+let ccMonth = todayStr().slice(0, 7), ccDay = todayStr();
+function ccItems(ds) {
+  return {
+    lec: getTimetable().filter(s => s.day === dayOf(ds)).sort((a, b) => a.start.localeCompare(b.start)).map(s => ({ s, eff: effectiveLecture(s, ds) })),
+    dl: getDeadlines().filter(d => d.due === ds),
+    ev: events().filter(e => e.date === ds)
+  };
+}
+function renderCombinedCal() {
+  const [y, m] = ccMonth.split('-').map(Number), first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
+  $('cc-title').textContent = first.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  let h = DAY_NAMES.map(d => `<b class="cal-h">${d}</b>`).join('') + '<i></i>'.repeat(first.getDay());
+  for (let d = 1; d <= days; d++) {
+    const ds = `${ccMonth}-${String(d).padStart(2, '0')}`, it = ccItems(ds);
+    h += `<button type="button" class="cal-day${ds === todayStr() ? ' today' : ''}${ds === ccDay ? ' sel' : ''}" data-cc="${ds}">${d}<em class="dots">${it.lec.length ? '<i class="dl"></i>' : ''}${it.dl.length ? '<i class="dd"></i>' : ''}${it.ev.length ? '<i class="de"></i>' : ''}</em></button>`;
+  }
+  $('cc-grid').innerHTML = h;
+  const it = ccItems(ccDay), e = escapeHtml;
+  $('cc-day-title').textContent = friendlyDate(ccDay);
+  $('cc-day').innerHTML = [
+    ...it.lec.map(({ s, eff }) => `<div class="cc-row"><span><strong>${e(eff.subject)}</strong> <small>${e(s.start)}–${e(s.end)} · ${e(eff.prof)}</small></span>${eff.cancelled ? '<span class="tag tag-bad">Cancelled</span>' : eff.substitute ? '<span class="tag tag-warn">Substitute</span>' : '<span class="tag tag-good">Lecture</span>'}</div>`),
+    ...it.dl.map(d => `<div class="cc-row"><span><strong>${e(d.title)}</strong> <small>${e(d.code || 'General')}</small></span><span class="tag tag-bad">Deadline</span></div>`),
+    ...it.ev.map(ev => `<div class="cc-row"><span><strong>${e(ev.name)}</strong> <small>${e(ev.venue || '')}</small></span><span class="tag tag-good">Event</span></div>`)
+  ].join('') || '<p class="muted">Nothing scheduled on this day.</p>';
+}
+function shiftCcMonth(n) {
+  const [y, m] = ccMonth.split('-').map(Number), d = new Date(y, m - 1 + n, 1);
+  ccMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  renderCombinedCal();
+}
+$('cc-prev').addEventListener('click', () => shiftCcMonth(-1));
+$('cc-next').addEventListener('click', () => shiftCcMonth(1));
+document.addEventListener('click', e => { const c = e.target.closest('[data-cc]'); if (c) { ccDay = c.dataset.cc; renderCombinedCal(); } });
 
 /* =====================  THEME (light / dark)  ===================== */
 function applyTheme(t) {
@@ -771,7 +912,9 @@ function renderAcademic(section) {
   renderGlance();
   updateBadges();
   renderPointsChart();
-  if (isFaculty()) renderActivityInfo();
+  renderNotices();
+  renderCombinedCal();
+  if (isFaculty()) { renderActivityInfo(); renderFacDash(); }
 }
 
 document.addEventListener('click', e => {
