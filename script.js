@@ -1070,7 +1070,461 @@ $('dl-form').addEventListener('submit', e => {
   renderDeadlines();
   toast('Deadline posted. Students can see it now.');
 });
+/* =====================================================================
+   v3 ADD-ON: AICTE heads + proof + review comments, Leave/OD, divisions,
+   audit trail, per-subject warnings, safe-bunk forecast.
+   Existing functions are wrapped/replaced by re-assigning them, so the
+   original code above stays untouched.
+   ===================================================================== */
 
+/* ---------- 0. DIVISIONS (each with its own timetable, roster, changes, deadlines, faculty syllabus) ---------- */
+const DEFAULT_DIV = 'A';
+let currentDiv = DEFAULT_DIV;
+const DIV_KEYS = ['cl_timetable', 'cl_roster', 'cl_changes', 'cl_fsyllabus', 'cl_deadlines'];
+const DIV_EMPTY = { cl_timetable: '[]', cl_roster: '[]' };
+(function () {
+  // Transparently store those keys per division, so no other code has to change.
+  const g = Storage.prototype.getItem, s = Storage.prototype.setItem;
+  const k = (self, key) => (self === localStorage && currentDiv !== DEFAULT_DIV && DIV_KEYS.includes(key)) ? key + '__' + currentDiv : key;
+  Storage.prototype.getItem = function (key) {
+    const kk = k(this, key), v = g.call(this, kk);
+    return (v === null && kk !== key && DIV_EMPTY[key]) ? DIV_EMPTY[key] : v;
+  };
+  Storage.prototype.setItem = function (key, val) { return s.call(this, k(this, key), val); };
+})();
+
+const getDivisions = () => { const d = read('cl_divisions', null); return Array.isArray(d) && d.length ? d : [{ id: DEFAULT_DIV, name: 'Division A' }]; };
+const divName = id => (getDivisions().find(d => d.id === id) || { name: id }).name;
+const studentDivision = u => read('cl_student_div', {})[u] || DEFAULT_DIV;
+
+function mountDivisionBar() {
+  if ($('div-bar')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'div-bar'; wrap.className = 'div-bar'; wrap.hidden = true;
+  wrap.innerHTML = '<select id="div-switch" class="ctrl" aria-label="Division"></select>'
+    + '<button type="button" id="div-add" class="btn btn-outline small-btn">＋ Division</button>'
+    + '<button type="button" id="div-assign" class="btn btn-outline small-btn">Assign login</button>';
+  document.querySelector('.top-actions').prepend(wrap);
+  $('div-switch').addEventListener('change', () => setDivision($('div-switch').value));
+  $('div-add').addEventListener('click', () => {
+    const name = prompt('New division / class name (e.g. Div B)');
+    if (!name || !name.trim()) return;
+    const list = getDivisions();
+    let id = slugOf(name) || 'div';
+    if (list.some(d => d.id === id) || id === DEFAULT_DIV) id += '-' + (list.length + 1);
+    const copy = confirm('Copy the current timetable into the new division?\nOK = copy it, Cancel = start empty');
+    const tt = copy ? getTimetable().map(s => ({ ...s, id: uid() })) : [];
+    save('cl_divisions', [...list, { id, name: name.trim() }]);
+    currentDiv = id;
+    save('cl_timetable', tt);
+    setDivision(id);
+    toast('Division created. Add students in the Register page.');
+  });
+  $('div-assign').addEventListener('click', () => {
+    const u = prompt('Which student login should join ' + divName(currentDiv) + '?  (' + STUDENT_LOGINS.join(' / ') + ')');
+    if (!u) return;
+    const l = u.trim().toLowerCase();
+    if (!STUDENT_LOGINS.includes(l)) { toast('Unknown login.'); return; }
+    const map = read('cl_student_div', {}); map[l] = currentDiv; save('cl_student_div', map);
+    const r = getRoster();
+    if (!r.some(x => x.id === l)) { r.push({ id: l, roll: String(r.length + 1).padStart(2, '0'), name: displayName(l) }); save('cl_roster', r.sort(byRoll)); }
+    render(); toast(displayName(l) + ' now belongs to ' + divName(currentDiv) + '.');
+  });
+}
+function refreshDivisionUi() {
+  const fac = username === 'faculty', bar = $('div-bar');
+  if (bar) {
+    bar.hidden = !fac;
+    if (fac) { const sel = $('div-switch'); sel.innerHTML = getDivisions().map(d => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)}</option>`).join(''); sel.value = currentDiv; }
+  }
+  if (username && !fac) $('profile-role').textContent = 'Student · ' + divName(currentDiv);
+}
+function setDivision(id) {
+  currentDiv = id;
+  localStorage.setItem('cl_fac_div', id);
+  refreshDivisionUi(); render(); rgPrepare();
+}
+mountDivisionBar();
+
+const _login = login;
+login = function (u) {
+  if (u === 'faculty') { const saved = localStorage.getItem('cl_fac_div'); currentDiv = getDivisions().some(d => d.id === saved) ? saved : DEFAULT_DIV; }
+  else currentDiv = studentDivision(u);
+  _login(u);
+  refreshDivisionUi();
+};
+
+/* ---------- 1. AICTE HEADS + POINT CAPS (edit the numbers to match your college handbook) ---------- */
+const AICTE_HEADS = {
+  'NSS / NCC': 20,
+  'Rural Development & Social Service': 20,
+  'Sports & Cultural': 20,
+  'Innovation / IPR / Technical': 20,
+  'Other (faculty-approved)': 10
+};
+const CAT_TO_HEAD = { NSS: 'NSS / NCC', 'Social service': 'Rural Development & Social Service', Sports: 'Sports & Cultural', Cultural: 'Sports & Cultural', Technical: 'Innovation / IPR / Technical', Innovation: 'Innovation / IPR / Technical' };
+const headFromCategory = c => AICTE_HEADS[c] ? c : (CAT_TO_HEAD[c] || 'Other (faculty-approved)');
+const capOf = h => AICTE_HEADS[h] ?? 10;
+function headOf(r) {
+  if (r.head && AICTE_HEADS[r.head]) return r.head;
+  const ev = events().find(x => x.id === r.eventId);
+  return headFromCategory((ev && ev.category) || r.category);
+}
+approvedPoints = function (list) {
+  const by = {};
+  list.filter(r => r.status === 'Approved').forEach(r => { const h = headOf(r); by[h] = (by[h] || 0) + Number(r.points || 0); });
+  return Object.entries(by).reduce((sum, [h, v]) => sum + Math.min(v, capOf(h)), 0);   // each head is capped
+};
+catOf = r => headOf(r);
+pointsByCategory = function () {
+  const by = {};
+  myRecords().filter(r => r.status === 'Approved').forEach(r => { const h = headOf(r); by[h] = (by[h] || 0) + Number(r.points || 0); });
+  return Object.entries(by).map(([h, v]) => [h, Math.min(v, capOf(h))]).filter(([, v]) => v > 0);
+};
+function fillHeadSelect() {
+  const sel = $('aicte-head'); if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Auto (from event category)</option>' + Object.keys(AICTE_HEADS).map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)} — max ${AICTE_HEADS[h]} pts</option>`).join('');
+  sel.value = prev;
+}
+function appendHeadCaps() {
+  const box = $('pts-chart'); if (!box || isFaculty()) return;
+  const mine = myRecords();
+  box.insertAdjacentHTML('beforeend', '<div class="eyebrow" style="margin-top:16px">CAP USAGE PER HEAD</div>' + Object.keys(AICTE_HEADS).map(h => {
+    const raw = mine.filter(r => r.status === 'Approved' && headOf(r) === h).reduce((s, r) => s + Number(r.points || 0), 0);
+    const used = Math.min(raw, capOf(h)), pend = mine.filter(r => r.status === 'Pending' && headOf(r) === h).length;
+    return `<div class="cap-row"><span>${escapeHtml(h)}${pend ? ` <small>(${pend} pending)</small>` : ''}</span><b>${used}/${capOf(h)}</b><div class="bar ${used >= capOf(h) ? 'bad' : 'good'}"><i style="width:${used / capOf(h) * 100}%"></i></div></div>`;
+  }).join(''));
+}
+
+/* ---------- 2. PROOF FILES (stored in the browser; images are compressed) ---------- */
+const getProofs = () => read('cl_proofs', {});
+function putProof(key, p) {
+  const all = getProofs(); all[key] = p;
+  try { save('cl_proofs', all); return true; }
+  catch (e) { toast('Browser storage is full. Try a smaller file.'); return false; }
+}
+function readProof(file) {
+  return new Promise(res => {
+    if (!file) return res(null);
+    if (file.size > 8 * 1024 * 1024) { toast('File is too big (max 8 MB).'); return res(null); }
+    if (file.type === 'application/pdf') {
+      if (file.size > 600 * 1024) { toast('PDF too large for browser storage (max 600 KB). Use a photo or a smaller PDF.'); return res(null); }
+      const fr = new FileReader();
+      fr.onload = () => res({ name: file.name, type: file.type, data: fr.result });
+      fr.onerror = () => res(null);
+      fr.readAsDataURL(file); return;
+    }
+    if (!file.type.startsWith('image/')) { toast('Attach an image or a PDF.'); return res(null); }
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const sc = Math.min(1, 1000 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res({ name: file.name.replace(/\.\w+$/, '') + '.jpg', type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.72) });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('Could not read that image.'); res(null); };
+    img.src = url;
+  });
+}
+async function viewProof(key) {
+  const p = getProofs()[key];
+  if (!p) { toast('No proof attached.'); return; }
+  const url = URL.createObjectURL(await (await fetch(p.data)).blob());
+  $('profile-body').innerHTML = `<div class="eyebrow">PROOF</div><h2>${escapeHtml(p.name)}</h2>`
+    + (p.type === 'application/pdf' ? `<iframe class="proof-frame" src="${url}"></iframe>` : `<img class="proof-img" src="${url}" alt="Proof">`)
+    + `<a class="text-btn" href="${url}" download="${escapeHtml(p.name)}">Download ↓</a>`;
+  $('profile-modal').hidden = false;
+}
+
+/* Student submission: attach the chosen AICTE head + proof to the new record */
+const _submitCheckin = submitCheckin;
+submitCheckin = async function (eventId, code) {
+  const headSel = $('aicte-head').value, file = $('proof-file').files[0];
+  const proof = await readProof(file);
+  if (file && !proof) return;
+  const before = new Set(records().map(r => r.id));
+  await _submitCheckin(eventId, code);
+  const rec = records().find(r => !before.has(r.id) && r.student === username);
+  if (!rec) return;
+  const ev = events().find(e => e.id === rec.eventId);
+  save('aicte_records', records().map(r => r.id === rec.id ? { ...r, head: headSel || headFromCategory(ev && ev.category) } : r));
+  if (proof) putProof('rec_' + rec.id, proof);
+  $('proof-file').value = '';
+  render();
+};
+
+/* Student "My records": show head, proof buttons and faculty comment */
+renderMyRecords = function () {
+  const body = $('my-records'); if (!body) return;
+  const proofs = getProofs(), mine = myRecords().slice().reverse();
+  body.innerHTML = mine.length ? mine.map(r => {
+    const has = !!proofs['rec_' + r.id];
+    return `<tr><td><strong>${escapeHtml(r.event)}</strong><br><small>🏷 ${escapeHtml(headOf(r))}</small><br>`
+      + (has ? `<button type="button" class="text-btn inline" data-proof-view="rec_${r.id}">View proof</button>` : '')
+      + (r.status !== 'Approved' ? `<button type="button" class="text-btn inline" data-proof-attach="${r.id}">${has ? 'Replace proof' : 'Attach proof'}</button>` : '')
+      + (r.comment ? `<div class="rv-comment">💬 Faculty: ${escapeHtml(r.comment)}</div>` : '')
+      + `</td><td>${escapeHtml(r.date || '—')}</td><td>${Number(r.duration) || 0} hrs</td><td>${Number(r.points) || 0}</td><td><span class="status-pill ${statusClass(r.status)}">${escapeHtml(r.status)}</span></td></tr>`;
+  }).join('') : '<tr><td colspan="5">No activity records yet. Join an event and submit its QR code.</td></tr>';
+};
+
+/* Faculty review queue: proof + comment + approve/reject */
+function renderReviewQueue() {
+  if (!isFaculty() || !$('pending-approvals')) return;
+  const all = records(), proofs = getProofs();
+  const pending = all.filter(r => r.status === 'Pending' && studentDivision(r.student) === currentDiv);
+  $('approval-count').textContent = pending.length + ' waiting';
+  $('pending-approvals').innerHTML = pending.length ? pending.map(r => {
+    const head = headOf(r), cap = capOf(head);
+    const used = all.filter(x => x.student === r.student && x.status === 'Approved' && headOf(x) === head).reduce((s, x) => s + Number(x.points || 0), 0);
+    return `<div class="rv-row"><div class="rv-main"><strong>${escapeHtml(displayName(r.student))} · ${escapeHtml(r.event)}</strong>
+      <small>${Number(r.duration) || 0} hours · ${Number(r.points) || 0} point(s) · ${escapeHtml(r.date || '')}</small>
+      <small>🏷 ${escapeHtml(head)} · cap used ${Math.min(used, cap)}/${cap}</small>
+      ${proofs['rec_' + r.id] ? `<button type="button" class="text-btn inline" data-proof-view="rec_${r.id}">📎 View proof</button>` : '<small>No proof attached</small>'}</div>
+      <div class="rv-actions"><input class="ctrl rv-comment-in" placeholder="Comment (required to reject)" aria-label="Comment">
+      <div class="approval-actions"><button type="button" class="mini-btn" data-rv-approve="${r.id}">Approve</button><button type="button" class="mini-btn reject" data-rv-reject="${r.id}">Reject</button></div></div></div>`;
+  }).join('') : '<p class="muted">No records waiting for approval.</p>';
+}
+const _renderFacultyRecords = renderFacultyRecords;
+renderFacultyRecords = function () { _renderFacultyRecords(); renderReviewQueue(); };
+$('student-search').addEventListener('input', renderReviewQueue);
+
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-proof-view]');
+  if (v) viewProof(v.dataset.proofView);
+  const at = e.target.closest('[data-proof-attach]');
+  if (at) {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+    inp.onchange = async () => { const p = await readProof(inp.files[0]); if (p && putProof('rec_' + at.dataset.proofAttach, p)) { toast('Proof attached.'); render(); } };
+    inp.click();
+  }
+  const a = e.target.closest('[data-rv-approve]'), r = e.target.closest('[data-rv-reject]');
+  if ((a || r) && isFaculty()) {
+    const btn = a || r, id = Number(btn.dataset[a ? 'rvApprove' : 'rvReject']);
+    const comment = btn.closest('.rv-row').querySelector('.rv-comment-in').value.trim();
+    if (r && !comment) { toast('Add a comment so the student knows why it was rejected.'); return; }
+    save('aicte_records', records().map(x => x.id === id ? { ...x, status: a ? 'Approved' : 'Rejected', comment, reviewedAt: new Date().toISOString(), reviewedBy: 'Faculty' } : x));
+    render(); toast(a ? 'Approved.' : 'Rejected with comment.');
+  }
+});
+
+/* CSV report: use capped points */
+const _downloadReport = downloadReport;
+downloadReport = function (kind) {
+  if (kind !== 'points') return _downloadReport(kind);
+  const by = {};
+  records().forEach(r => (by[r.student] = by[r.student] || []).push(r));
+  downloadCsv(`aicte-points-${todayStr()}.csv`, [['Student', 'Approved points (after head caps)', 'Approved activities', 'Pending']]
+    .concat(Object.entries(by).map(([s, l]) => [displayName(s), approvedPoints(l), l.filter(r => r.status === 'Approved').length, l.filter(r => r.status === 'Pending').length])));
+};
+
+/* ---------- 3. LEAVE / OD ---------- */
+const getLeaves = () => read('cl_leaves');
+const isExcused = (student, date) => getLeaves().some(l => l.student === student && l.status === 'Approved' && l.from <= date && date <= l.to);
+
+// Replaces the original: absences on approved Leave/OD days are not counted
+attendanceStats = function (student) {
+  const slots = getTimetable(), per = {};
+  let X = 0;
+  subjectsList().forEach(s => { per[s.code] = { code: s.code, name: s.name, A: 0, T: 0 }; });
+  getAttendance().filter(r => r.student === student).forEach(r => {
+    const slot = slots.find(s => s.id === r.slotId);
+    if (!slot) return;
+    const eff = effectiveLecture(slot, r.date);
+    if (eff.cancelled || r.status === 'Cancelled') return;
+    if (r.status !== 'Attended' && isExcused(student, r.date)) { X++; return; }
+    if (!per[eff.code]) per[eff.code] = { code: eff.code, name: eff.subject, A: 0, T: 0 };
+    per[eff.code].T++;
+    if (r.status === 'Attended') per[eff.code].A++;
+  });
+  const list = Object.values(per);
+  return { list, A: list.reduce((s, x) => s + x.A, 0), T: list.reduce((s, x) => s + x.T, 0), X };
+};
+
+const lvTag = s => s === 'Approved' ? 'tag-good' : s === 'Rejected' ? 'tag-bad' : 'tag-warn';
+function renderLeave() {
+  if (!$('leave-section')) return;
+  const fac = isFaculty(), all = getLeaves(), proofs = getProofs();
+  const proofBtn = l => proofs['lv_' + l.id] ? `<button type="button" class="text-btn inline" data-proof-view="lv_${l.id}">📎 View proof</button>` : '';
+  const range = l => `${escapeHtml(friendlyDate(l.from))} → ${escapeHtml(friendlyDate(l.to))}`;
+  let pendingCount = 0;
+  if (!fac) {
+    const mine = all.filter(l => l.student === username).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    pendingCount = mine.filter(l => l.status === 'Pending').length;
+    $('lv-mine').innerHTML = mine.length ? mine.map(l => `<div class="deadline-card"><div><strong>${escapeHtml(l.type)} · ${range(l)}</strong><small>${escapeHtml(l.reason)}</small><div><span class="tag ${lvTag(l.status)}">${escapeHtml(l.status)}</span></div>${l.comment ? `<div class="rv-comment">💬 Faculty: ${escapeHtml(l.comment)}</div>` : ''}</div><div class="deadline-actions">${proofBtn(l)}</div></div>`).join('') : '<p class="muted">No requests yet.</p>';
+  } else {
+    const mineDiv = all.filter(l => l.division === currentDiv), pend = mineDiv.filter(l => l.status === 'Pending'), done = mineDiv.filter(l => l.status !== 'Pending').sort((a, b) => (b.reviewedAt || '').localeCompare(a.reviewedAt || '')).slice(0, 30);
+    pendingCount = pend.length;
+    $('lv-queue').innerHTML = pend.length ? pend.map(l => `<div class="rv-row"><div class="rv-main"><strong>${escapeHtml(displayName(l.student))} · ${escapeHtml(l.type)}</strong><small>${range(l)}</small><small>${escapeHtml(l.reason)}</small>${proofBtn(l)}</div><div class="rv-actions"><input class="ctrl rv-comment-in" placeholder="Comment (required to reject)" aria-label="Comment"><div class="approval-actions"><button type="button" class="mini-btn" data-lv-approve="${l.id}">Approve</button><button type="button" class="mini-btn reject" data-lv-reject="${l.id}">Reject</button></div></div></div>`).join('') : '<p class="muted">No pending requests.</p>';
+    $('lv-history').innerHTML = done.length ? done.map(l => `<div class="approval-row"><div><strong>${escapeHtml(displayName(l.student))} · ${escapeHtml(l.type)} · ${range(l)}</strong><small><span class="tag ${lvTag(l.status)}">${escapeHtml(l.status)}</span>${l.comment ? ' ' + escapeHtml(l.comment) : ''}</small></div>${l.status === 'Approved' ? `<button type="button" class="mini-btn reject" data-lv-revoke="${l.id}">Revoke</button>` : ''}</div>`).join('') : '<p class="muted">Nothing reviewed yet.</p>';
+  }
+  $('lv-chip').textContent = pendingCount + ' pending';
+  const nav = $('nav-leave-count'); if (nav) { nav.textContent = pendingCount; nav.hidden = pendingCount === 0; }
+}
+$('lv-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (isFaculty()) return;
+  const from = $('lv-from').value, to = $('lv-to').value, reason = $('lv-reason').value.trim(), file = $('lv-proof').files[0];
+  if (!from || !to || !reason) { toast('Fill in the dates and a reason.'); return; }
+  if (to < from) { toast('"To" date cannot be before "From" date.'); return; }
+  const proof = await readProof(file);
+  if (file && !proof) return;
+  const item = { id: uid(), student: username, division: currentDiv, type: $('lv-type').value, from, to, reason, status: 'Pending', comment: '', createdAt: new Date().toISOString() };
+  save('cl_leaves', [...getLeaves(), item]);
+  if (proof) putProof('lv_' + item.id, proof);
+  e.target.reset(); renderLeave(); toast('Request sent to faculty.');
+});
+document.addEventListener('click', e => {
+  if (!isFaculty()) return;
+  const a = e.target.closest('[data-lv-approve]'), r = e.target.closest('[data-lv-reject]'), v = e.target.closest('[data-lv-revoke]');
+  if (!a && !r && !v) return;
+  const btn = a || r || v, id = btn.dataset[a ? 'lvApprove' : r ? 'lvReject' : 'lvRevoke'];
+  let status, comment = '';
+  if (v) { if (!confirm('Revoke this approval? The days will count against attendance again.')) return; status = 'Rejected'; comment = 'Approval revoked by faculty'; }
+  else {
+    comment = btn.closest('.rv-row').querySelector('.rv-comment-in').value.trim();
+    if (r && !comment) { toast('Add a comment so the student knows why it was rejected.'); return; }
+    status = a ? 'Approved' : 'Rejected';
+  }
+  save('cl_leaves', getLeaves().map(l => l.id === id ? { ...l, status, comment, reviewedAt: new Date().toISOString() } : l));
+  render(); toast('Request ' + status.toLowerCase() + '.');
+});
+const _showSection = showSection;
+showSection = function (s) { _showSection(s); if (s === 'leave') $('page-title').textContent = 'Leave & OD requests'; };
+
+// Register: mark students who are on approved leave/OD that day
+const _renderRegister = renderRegister;
+renderRegister = function () {
+  _renderRegister();
+  if (!isFaculty()) return;
+  const date = $('rg-date').value;
+  document.querySelectorAll('#rg-body [data-rg-toggle]').forEach(b => {
+    if (isExcused(b.dataset.rgToggle, date)) { const td = b.closest('tr').querySelector('.own-log'); if (td) td.insertAdjacentHTML('beforeend', ' <span class="tag tag-warn">On approved Leave/OD</span>'); }
+  });
+};
+
+/* ---------- 4. AUDIT TRAIL + EDITING PAST ATTENDANCE WITH A REASON ---------- */
+const getAudit = () => read('cl_audit');
+const statusLabel = s => s === 'Attended' ? 'Present' : s === 'Bunked' ? 'Absent' : (s || 'Not marked');
+function logAudit(entries) { save('cl_audit', [...getAudit(), ...entries].slice(-500)); }
+
+// Faculty register: changing saved/past attendance needs a reason
+const _rgSave = rgSave;
+rgSave = function () {
+  if (!isFaculty()) return;
+  const date = $('rg-date').value, slotId = $('rg-slot').value;
+  if (!slotId) { toast('Choose a lecture first.'); return; }
+  const att = getAttendance(), slot = getTimetable().find(s => s.id === slotId), roster = getRoster(), changes = [];
+  Object.keys(rgState).forEach(id => {
+    const prev = att.find(r => r.student === id && r.date === date && r.slotId === slotId);
+    const from = prev ? statusLabel(prev.status) : 'Not marked', to = rgState[id] === 'P' ? 'Present' : 'Absent';
+    if (from !== to && (date < todayStr() || (prev && prev.markedBy === 'Faculty'))) changes.push({ student: id, from, to });
+  });
+  let reason = '';
+  if (changes.length) {
+    const r = prompt(`You are changing ${date < todayStr() ? 'past' : 'saved'} attendance for ${changes.length} student(s).\nReason (required):`);
+    if (r === null || !r.trim()) { toast('A reason is required to change saved or past attendance.'); return; }
+    reason = r.trim();
+  }
+  _rgSave();
+  if (changes.length) logAudit(changes.map(c => ({
+    id: uid(), at: new Date().toISOString(), by: 'Faculty', division: currentDiv, date,
+    lecture: slot ? slot.code + ' ' + slot.subject : slotId, student: c.student,
+    studentName: (roster.find(x => x.id === c.student) || {}).name || c.student, from: c.from, to: c.to, reason
+  })));
+  renderAudit();
+};
+
+// Student: editing a past day needs a reason too
+const _acSetStatus = acSetStatus;
+acSetStatus = function (slotId, status) {
+  if (isFaculty()) return;
+  const date = $('ac-date').value || todayStr();
+  if (date >= todayStr()) return _acSetStatus(slotId, status);
+  const prev = getAttendance().find(r => r.student === username && r.date === date && r.slotId === slotId);
+  if (prev && prev.markedBy === 'Faculty') return _acSetStatus(slotId, status);   // original shows the "locked" message
+  const r = prompt('You are editing a past day. Reason (required):');
+  if (r === null || !r.trim()) { toast('A reason is required to edit past attendance.'); return; }
+  const slot = getTimetable().find(s => s.id === slotId);
+  const from = prev ? statusLabel(prev.status) : 'Not logged', to = prev && prev.status === status ? 'Not logged' : statusLabel(status);
+  _acSetStatus(slotId, status);
+  logAudit([{ id: uid(), at: new Date().toISOString(), by: 'Student', division: currentDiv, date, lecture: slot ? slot.code + ' ' + slot.subject : slotId, student: username, studentName: displayName(username), from, to, reason: r.trim() }]);
+};
+
+function renderAudit() {
+  const box = $('rg-audit'); if (!box || !isFaculty()) return;
+  const list = getAudit().filter(a => a.division === currentDiv).slice().reverse().slice(0, 50);
+  box.innerHTML = list.length ? `<div class="table-scroll"><table class="data-table"><thead><tr><th>WHEN</th><th>BY</th><th>LECTURE</th><th>STUDENT</th><th>CHANGE</th><th>REASON</th></tr></thead><tbody>`
+    + list.map(a => `<tr><td>${escapeHtml(new Date(a.at).toLocaleString('en-IN'))}</td><td>${escapeHtml(a.by)}</td><td>${escapeHtml(friendlyDate(a.date))}<br><small>${escapeHtml(a.lecture)}</small></td><td>${escapeHtml(a.studentName)}</td><td>${escapeHtml(a.from)} → <b>${escapeHtml(a.to)}</b></td><td>${escapeHtml(a.reason)}</td></tr>`).join('') + '</tbody></table></div>'
+    : '<p class="muted">No edits to past or saved attendance yet.</p>';
+}
+
+/* ---------- 5. SAFE-BUNK FORECAST + PER-SUBJECT 75% WARNINGS ---------- */
+function nextLecture() {
+  const slots = sortedSlots(getTimetable()); if (!slots.length) return null;
+  const hhmm = new Date().toTimeString().slice(0, 5), fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(todayStr() + 'T12:00:00'); d.setDate(d.getDate() + i);
+    const ds = fmt(d), list = slots.filter(s => s.day === dayOf(ds) && (i > 0 || s.start >= hhmm));
+    for (const s of list) { const eff = effectiveLecture(s, ds); if (!eff.cancelled) return { s, eff, ds }; }
+  }
+  return null;
+}
+function buildForecast(st) {
+  if (!st.T) return 'Log your lectures below to see your forecast.';
+  const p = predictor(st.A, st.T), below = 100 * st.A < PASS_PERCENT * st.T, plural = n => n === 1 ? '' : 's';
+  let html = below ? `📉 <b>Attend the next ${p.need} lecture${plural(p.need)}</b> in a row to get back to ${PASS_PERCENT}%.`
+    : p.skip === 0 ? `⚠️ You are right at ${PASS_PERCENT}%. <b>Do not miss the next lecture.</b>`
+    : `✅ <b>You can safely miss ${p.skip} more lecture${plural(p.skip)}</b> and still stay at ${PASS_PERCENT}% or above.`;
+  const bad = st.list.filter(s => s.T > 0 && 100 * s.A < PASS_PERCENT * s.T);
+  const edge = st.list.filter(s => s.T > 0 && 100 * s.A >= PASS_PERCENT * s.T && predictor(s.A, s.T).skip === 0);
+  if (bad.length || edge.length) {
+    html += `<div style="margin-top:10px"><b>Every subject needs ${PASS_PERCENT}%:</b></div><ul class="fc-list">`
+      + bad.map(s => `<li>🔴 <b>${escapeHtml(s.name)}</b> is at ${Math.round(s.A / s.T * 100)}% — attend the next <b>${predictor(s.A, s.T).need}</b> in a row.</li>`).join('')
+      + edge.map(s => `<li>🟡 <b>${escapeHtml(s.name)}</b> is right at the limit — do not miss it.</li>`).join('') + '</ul>';
+  }
+  const nl = nextLecture();
+  if (nl) {
+    const sub = st.list.find(x => x.code === nl.eff.code), sp = sub && sub.T ? predictor(sub.A, sub.T) : null;
+    const subBelow = sub && sub.T > 0 && 100 * sub.A < PASS_PERCENT * sub.T;
+    const advice = !sp ? 'No data for this subject yet.' : subBelow ? 'Attend — this subject is below 75%.' : sp.skip > 0 ? 'Safe to skip — you would stay at 75% or above.' : 'Attend — skipping it would drop you below 75%.';
+    html += `<div class="fc-next">Next lecture: ${escapeHtml(nl.eff.subject)} · ${escapeHtml(friendlyDate(nl.ds))} ${escapeHtml(nl.s.start)} → ${advice}</div>`;
+  }
+  if (st.X) html += `<div class="hint">${st.X} lecture(s) excused by approved Leave/OD are not counted.</div>`;
+  return html;
+}
+const _renderAttendance = renderAttendance;
+renderAttendance = function () {
+  _renderAttendance();
+  if (isFaculty()) return;
+  const st = attendanceStats(username);
+  $('ac-message').innerHTML = buildForecast(st);
+  const overallOk = st.T > 0 && 100 * st.A >= PASS_PERCENT * st.T;
+  if (overallOk && st.list.some(s => s.T > 0 && 100 * s.A < PASS_PERCENT * s.T)) { $('ac-status').className = 'ac-badge ac-warn'; $('ac-status').textContent = 'Subject shortage'; }
+};
+
+// Faculty dashboard: flag students short in any single subject + pending leave requests
+const _renderFacDash = renderFacDash;
+renderFacDash = function () {
+  _renderFacDash();
+  const box = $('fd-attention'); if (!box) return;
+  const n = classStats().filter(r => r.st.list.some(s => s.T > 0 && 100 * s.A < PASS_PERCENT * s.T)).length;
+  const lv = getLeaves().filter(l => l.status === 'Pending' && l.division === currentDiv).length;
+  const add = (go, t) => { box.querySelectorAll('p.muted').forEach(p => p.remove()); box.insertAdjacentHTML('beforeend', `<button type="button" class="attn-item" data-glance="${go}"><span>${escapeHtml(t)}</span><span>→</span></button>`); };
+  if (n) add('register', `${n} student(s) below ${PASS_PERCENT}% in at least one subject`);
+  if (lv) add('leave', `${lv} Leave/OD request(s) waiting`);
+};
+
+/* ---------- 6. HOOK EVERYTHING INTO THE EXISTING RENDER CYCLE ---------- */
+const _renderAcademic = renderAcademic;
+renderAcademic = function (section) {
+  _renderAcademic(section);
+  if (!username) return;
+  fillHeadSelect();
+  renderLeave();
+  if (isFaculty()) renderAudit(); else appendHeadCaps();
+};
 
 // Restore the last signed-in demo session for convenience.
 const remembered=localStorage.getItem('aicte_username');if(remembered&&['aditi','student2','faculty'].includes(remembered)){username=remembered;login(remembered)}else{$('login-view').hidden=false;$('dashboard-view').hidden=true}
