@@ -220,3 +220,26 @@ html[data-theme="dark"] .attn-item{background:#3a3320;border-color:#5a4d24;color
 .cc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 13px;margin-bottom:8px;border:1px solid #efedf7;border-radius:12px;background:#fbfaff;flex-wrap:wrap;font-size:12px}
 .cc-row small{color:var(--muted)}
 html[data-theme="dark"] :is(.cc-grid .cal-day,.cc-row){background:#20233a;border-color:#2d3050}
+/* ===== v3: heads, proof, review queue, leave/OD, divisions, forecast ===== */
+.scan-extra{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.scan-extra select,.scan-extra input{width:100%;padding:12px 13px;border:1px solid #e5e5f0;background:#fbfbfe;border-radius:11px;color:var(--ink);font-size:11px}
+.mini-label{display:block;font-size:10px;font-weight:700;color:var(--muted);margin:0 0 6px}
+.rv-row{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:13px;margin-bottom:10px;background:#fbfaff;border:1px solid #efedf7;border-radius:12px;flex-wrap:wrap}
+.rv-main{min-width:200px;flex:1}
+.rv-main strong,.rv-main small{display:block}
+.rv-main small{color:var(--muted);font-size:10px;margin-top:4px}
+.rv-actions{display:grid;gap:8px;min-width:230px}
+.rv-comment-in{width:100%;font-size:11px;padding:9px 11px}
+.rv-comment{margin-top:6px;padding:7px 9px;background:#f3f1ff;border-radius:8px;font-size:10px;color:#5f4ad8;white-space:normal}
+.proof-img{max-width:100%;max-height:60vh;border-radius:12px;display:block;margin:10px 0}
+.proof-frame{width:100%;height:60vh;border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.div-bar{display:flex;gap:8px;align-items:center}
+.div-bar .ctrl{padding:9px 10px;font-size:11px}
+.fc-list{margin:8px 0 0;padding-left:18px;line-height:1.8}
+.fc-next{margin-top:10px;padding:10px 12px;border-radius:10px;background:#eeeaff;color:#5f4ad8;font-weight:700;font-size:12px}
+.cap-row{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center;margin-top:10px;font-size:11px}
+.cap-row .bar{grid-column:1 / -1;margin:0}
+.text-btn.inline{display:inline;padding:2px 6px}
+html[data-theme="dark"] :is(.rv-row,.scan-extra select,.scan-extra input){background:#20233a;border-color:#2d3050;color:var(--ink)}
+html[data-theme="dark"] .rv-comment,html[data-theme="dark"] .fc-next{background:#2c2660;color:#cfc6ff}
+@media(max-width:760px){.scan-extra{grid-template-columns:1fr}.rv-actions{min-width:100%}.div-bar{flex-wrap:wrap}}
