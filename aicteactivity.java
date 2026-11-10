@@ -36,6 +36,10 @@ public class aicteactivity {
         DEMO_USERS.put("aditi", "demo123");
         DEMO_USERS.put("student2", "demo123");
         DEMO_USERS.put("faculty", "demo123");
+        for (String u : new String[]{"rahul-sharma", "priya-patel", "karan-shah",
+                                     "neha-verma", "aman-gupta", "sneha-iyer"}) {
+            DEMO_USERS.put(u, "demo123");
+        }
     }
 
     private static final class StudentData {
@@ -192,7 +196,13 @@ public class aicteactivity {
     private static String displayName(String username) {
         if ("aditi".equals(username)) return "Aditi Singh";
         if ("student2".equals(username)) return "Student Two";
-        return username;
+        StringBuilder sb = new StringBuilder();
+        for (String part : username.split("-")) {
+            if (part.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return sb.toString();   // rahul-sharma -> Rahul Sharma
     }
 
     private static void loadData() throws IOException {
