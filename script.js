@@ -38,7 +38,7 @@ function initMaps(){if(!window.L)return;if($('map')&&!studentMap){studentMap=L.m
 function updateMapMarkers(){if(!window.L)return;if(eventLayer){eventLayer.clearLayers();events().forEach(e=>{if(Number.isFinite(Number(e.lat))&&Number.isFinite(Number(e.lon))){L.marker([Number(e.lat),Number(e.lon)]).bindPopup(`<b>${escapeHtml(e.name)}</b><br>${escapeHtml(e.venue||'Campus venue')}<br>Allowed radius: ${Number(e.radius)||100} m`).addTo(eventLayer)}})}if(facultyMap&&facultyMarker){facultyMarker.setLatLng([Number($('event-lat').value)||19.076,Number($('event-lon').value)||72.8777])}}
 function setFacultyCoords(lat,lon){$('event-lat').value=Number(lat).toFixed(6);$('event-lon').value=Number(lon).toFixed(6);if(facultyMap){if(facultyMarker)facultyMarker.setLatLng([lat,lon]);else facultyMarker=L.marker([lat,lon],{draggable:true}).addTo(facultyMap);facultyMap.setView([lat,lon],15);facultyMarker.off('dragend').on('dragend',e=>{const p=e.target.getLatLng();$('event-lat').value=p.lat.toFixed(6);$('event-lon').value=p.lng.toFixed(6)})}$('faculty-map-status').textContent=`Selected location: ${Number(lat).toFixed(5)}, ${Number(lon).toFixed(5)}. Click or drag the marker to adjust.`}
 function openAnnouncements(){$('announcement-modal').hidden=false;renderAnnouncements()}function closeAnnouncements(){$('announcement-modal').hidden=true}
-$('login-form').addEventListener('submit',async e=>{e.preventDefault();const u=$('username').value.trim().toLowerCase(),p=$('password').value;$('login-error').hidden=true;try{const d=await api('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});localStorage.setItem('aicte_token',d.token);login(u)}catch(err){if(err.message.includes('Failed to fetch')){const valid=['aditi','student2','faculty'].includes(u)&&p==='demo123';if(valid){toast('Demo mode: start Java backend for server login.');login(u)}else{$('login-error').textContent='Use a demo account and password shown below.';$('login-error').hidden=false}}else{$('login-error').textContent=err.message;$('login-error').hidden=false}}});
+$('login-form').addEventListener('submit',async e=>{e.preventDefault();const u=$('username').value.trim().toLowerCase(),p=$('password').value;$('login-error').hidden=true;try{const d=await api('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});localStorage.setItem('aicte_token',d.token);login(u)}catch(err){if(err.message.includes('Failed to fetch')){const valid=LOGINS.includes(u)&&p==='demo123';if(valid){toast('Demo mode: start Java backend for server login.');login(u)}else{$('login-error').textContent='Use a demo account and password shown below.';$('login-error').hidden=false}}else{$('login-error').textContent=err.message;$('login-error').hidden=false}}});
 document.querySelectorAll('.demo-chip').forEach(b=>b.addEventListener('click',()=>{$('username').value=b.dataset.user;$('password').value='demo123'}));
 $('logout-btn').addEventListener('click',logout);document.querySelectorAll('.nav-item[data-section]').forEach(b=>b.addEventListener('click',()=>showSection(b.dataset.section)));document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>showSection(b.dataset.go)));$('explore-btn').addEventListener('click',()=>showSection('activities'));$('announcement-btn').addEventListener('click',openAnnouncements);$('close-announcements').addEventListener('click',closeAnnouncements);$('announcement-modal').addEventListener('click',e=>{if(e.target===$('announcement-modal'))closeAnnouncements()});$('refresh-tip').addEventListener('click',()=>{renderTips();toast('Suggestion refreshed.')});
 $('event-form').addEventListener('submit',e=>{e.preventDefault();if(username!=='faculty')return;const duration=Number($('event-duration').value),qr=$('event-qr').value.trim();if(events().some(x=>x.qr.toLowerCase()===qr.toLowerCase())){toast('Use a unique event code.');return}const item={id:Date.now(),name:$('event-name').value.trim(),description:$('event-description').value.trim(),date:$('event-date').value,duration,venue:$('event-venue').value.trim()||'Campus venue',lat:Number($('event-lat').value),lon:Number($('event-lon').value),radius:Number($('event-radius').value)||100,qr,category:$('event-category').value,status:'Upcoming'};save('aicte_events',[...events(),item]);e.target.reset();$('event-duration').value=3;$('event-radius').value=100;$('event-lat').value='19.0760';$('event-lon').value='72.8777';setFacultyCoords(19.076,72.8777);render();toast('Event published! It now appears in the student portal.')});
@@ -1070,12 +1070,25 @@ $('dl-form').addEventListener('submit', e => {
   renderDeadlines();
   toast('Deadline posted. Students can see it now.');
 });
+
 /* =====================================================================
-   v3 ADD-ON: AICTE heads + proof + review comments, Leave/OD, divisions,
-   audit trail, per-subject warnings, safe-bunk forecast.
-   Existing functions are wrapped/replaced by re-assigning them, so the
-   original code above stays untouched.
+   v3 ADD-ON: extra student logins, AICTE heads + proof + review comments,
+   Leave/OD, divisions, audit trail, per-subject warnings, safe-bunk forecast.
+   Existing functions are wrapped/replaced by re-assigning them.
    ===================================================================== */
+
+/* ---------- extra student logins (username = roster id, password demo123) ---------- */
+const NEW_STUDENTS = {
+  'rahul-sharma': 'Rahul Sharma',
+  'priya-patel': 'Priya Patel',
+  'karan-shah': 'Karan Shah',
+  'neha-verma': 'Neha Verma',
+  'aman-gupta': 'Aman Gupta',
+  'sneha-iyer': 'Sneha Iyer'
+};
+Object.assign(names, NEW_STUDENTS);
+Object.keys(NEW_STUDENTS).forEach(id => { if (!STUDENT_LOGINS.includes(id)) STUDENT_LOGINS.push(id); });
+const LOGINS = [...STUDENT_LOGINS, 'faculty'];
 
 /* ---------- 0. DIVISIONS (each with its own timetable, roster, changes, deadlines, faculty syllabus) ---------- */
 const DEFAULT_DIV = 'A';
@@ -1527,4 +1540,4 @@ renderAcademic = function (section) {
 };
 
 // Restore the last signed-in demo session for convenience.
-const remembered=localStorage.getItem('aicte_username');if(remembered&&['aditi','student2','faculty'].includes(remembered)){username=remembered;login(remembered)}else{$('login-view').hidden=false;$('dashboard-view').hidden=true}
+const remembered=localStorage.getItem('aicte_username');if(remembered&&LOGINS.includes(remembered)){username=remembered;login(remembered)}else{$('login-view').hidden=false;$('dashboard-view').hidden=true}
