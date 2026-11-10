@@ -220,7 +220,8 @@ html[data-theme="dark"] .attn-item{background:#3a3320;border-color:#5a4d24;color
 .cc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 13px;margin-bottom:8px;border:1px solid #efedf7;border-radius:12px;background:#fbfaff;flex-wrap:wrap;font-size:12px}
 .cc-row small{color:var(--muted)}
 html[data-theme="dark"] :is(.cc-grid .cal-day,.cc-row){background:#20233a;border-color:#2d3050}
-/* ===== v3: heads, proof, review queue, leave/OD, divisions, forecast ===== */
+
+/* ===== v3: AICTE heads, proof, review queue, leave/OD, divisions, forecast ===== */
 .scan-extra{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .scan-extra select,.scan-extra input{width:100%;padding:12px 13px;border:1px solid #e5e5f0;background:#fbfbfe;border-radius:11px;color:var(--ink);font-size:11px}
 .mini-label{display:block;font-size:10px;font-weight:700;color:var(--muted);margin:0 0 6px}
