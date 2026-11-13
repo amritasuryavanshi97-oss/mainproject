@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 
 public class aicteactivity {
 
-private static final int PORT = 8081;
+private static final int PORT = 8080;
     private static final int BASE_POINTS = 75;
     private static final int TARGET = 100;
     private static final int POINTS_PER_CHECKIN = 5;
