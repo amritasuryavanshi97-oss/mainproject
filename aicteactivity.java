@@ -55,7 +55,7 @@ private static final int PORT = 8081;
             {"a9", "Kavya Iyer", "A"}, {"a10", "Rohan Desai", "A"},
 
             {"b1", "Kabir Joshi", "B"}, {"b2", "Meera Pillai", "B"},
-            {"a3", "Nikhil Kulkarni", "B"}, {"b4", "Nisha Reddy", "B"},
+            {"b3", "Nikhil Kulkarni", "B"}, {"b4", "Nisha Reddy", "B"},
             {"b5", "Pranav Gupta", "B"}, {"b6", "Riya Menon", "B"},
             {"b7", "Saanvi Bhatt", "B"}, {"b8", "Shaurya Jain", "B"},
             {"b9", "Tanvi Shetty", "B"}, {"b10", "Vivaan Saxena", "B"},
