@@ -66,4 +66,111 @@
       
         <!-- ============ STUDENT: ATTENDANCE & BUNK PREDICTOR ============ -->
         <section id="attendance-section" class="page-section" hidden>
-          <div class="page-intro"><div><div class="eyebrow">LECTURE ATTENDANCE</div><h2>Attendance &amp; bunk predictor 📊</h2><p>Log each lecture and see how many you can skip while stay
+          <div class="page-intro"><div><div class="eyebrow">LECTURE ATTENDANCE</div><h2>Attendance &amp; bunk predictor 📊</h2><p>Log each lecture and see how many you can skip while staying above 75%.</p></div><div class="filter-chip">Minimum required: 75%</div></div>
+          <div class="stats-grid">
+            <article class="stat-card stat-lilac"><div class="stat-top"><span>Overall attendance</span><span class="stat-icon">%</span></div><div class="stat-number"><strong id="ac-pct">—</strong></div><div class="stat-foot"><span>Cancelled lectures are not counted</span><span class="spark">↗</span></div></article>
+            <article class="stat-card stat-yellow"><div class="stat-top"><span>Lectures attended</span><span class="stat-icon">✓</span></div><div class="stat-number"><strong id="ac-attended">0</strong><span>/ <b id="ac-total">0</b></span></div><div class="stat-foot"><span>Attended out of held</span><span class="spark">✦</span></div></article>
+            <article class="stat-card stat-blue"><div class="stat-top"><span id="ac-skip-label">Safe skips left</span><span class="stat-icon">⏱</span></div><div class="stat-number"><strong id="ac-skip">0</strong></div><div class="stat-foot"><span>Based on the 75% rule</span><span class="spark">↗</span></div></article>
+            <article class="stat-card stat-peach"><div class="stat-top"><span>Status</span><span class="stat-icon">🚦</span></div><div id="ac-status" class="ac-badge ac-neutral">No data yet</div><div class="stat-foot"><span>Keep it above 75%</span><span class="spark">✦</span></div></article>
+          </div>
+          <div id="ac-message" class="panel callout">Log your lectures below to see how many you can skip.</div>
+          <div class="panel whatif"><div class="panel-heading"><div><div class="eyebrow">PLAN AHEAD</div><h3>What if I skip?</h3></div></div><div class="ctrl-row"><label>I will skip <input id="wi-skip" type="number" min="0" value="1" class="ctrl wi-num"> lectures</label><label>and attend <input id="wi-attend" type="number" min="0" value="0" class="ctrl wi-num"> lectures</label></div><p id="wi-result" class="callout"></p></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">MONTH VIEW</div><h3>Attendance calendar</h3></div><div class="ctrl-row"><button type="button" id="cal-prev" class="btn btn-outline small-btn" aria-label="Previous month">‹</button><strong id="cal-title"></strong><button type="button" id="cal-next" class="btn btn-outline small-btn" aria-label="Next month">›</button></div></div><div id="cal-grid" class="cal-grid"></div><p class="hint"><span class="cal-key g"></span>all attended <span class="cal-key r"></span>missed at least one <span class="cal-key n"></span>no data</p></div>
+          <div class="dashboard-grid ac-charts"><div class="panel"><div class="panel-heading"><div><div class="eyebrow">BY SUBJECT</div><h3>Attendance per subject</h3></div></div><div id="ac-chart-subjects"></div></div><div class="panel"><div class="panel-heading"><div><div class="eyebrow">OVER TIME</div><h3>Attendance trend</h3></div></div><div id="ac-chart-trend"></div></div></div>
+          <div class="dashboard-grid">
+            <div class="panel table-panel"><div class="table-tools"><h3>Subject-wise predictor</h3></div><div class="table-scroll"><table class="data-table"><thead><tr><th>SUBJECT</th><th>ATTENDED</th><th>TOTAL</th><th>PERCENT</th><th>PREDICTOR</th></tr></thead><tbody id="ac-subjects"></tbody></table></div></div>
+            <div class="panel"><div class="panel-heading"><div><div class="eyebrow">LOG YOUR LECTURES</div><h3>Lectures on a day</h3></div><input type="date" id="ac-date" class="ctrl" aria-label="Choose date"></div><div id="ac-log"></div><p class="hint">Tap a button to log a lecture. Tap the same button again to undo. If faculty has marked a lecture, it is locked.</p></div>
+          </div>
+        </section>
+
+        <!-- ============ FACULTY: ATTENDANCE REGISTER ============ -->
+        <section id="register-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">FACULTY WORKSPACE</div><h2>Attendance register 🗒️</h2><p>Mark the whole class like a spreadsheet. Your entries override what students logged themselves.</p></div></div>
+          <div class="panel">
+            <div class="register-bar">
+              <input type="date" id="rg-date" class="ctrl" aria-label="Date">
+              <select id="rg-slot" class="ctrl" aria-label="Lecture"></select>
+              <button type="button" class="btn btn-outline small-btn" id="rg-all-present">Mark all present</button>
+              <button type="button" class="btn btn-outline small-btn" id="rg-all-absent">Mark all absent</button>
+              <button type="button" class="btn btn-primary small-btn" id="rg-save">Save register ↗</button>
+              <button type="button" class="btn btn-outline small-btn" id="rg-export">Export CSV ↓</button>
+            </div>
+            <div class="counters"><div class="counter"><b id="rg-present">0</b>Present</div><div class="counter"><b id="rg-absent">0</b>Absent</div><div class="counter"><b id="rg-total">0</b>Total</div><div class="counter"><b id="rg-percent">—</b>Present %</div></div>
+            <p id="rg-note" class="hint"></p>
+          </div>
+          <div class="panel table-panel" style="margin-top:17px"><div class="table-scroll sheet-scroll"><table class="data-table sheet"><thead><tr><th class="rownum">#</th><th>ROLL NO</th><th>STUDENT</th><th>STATUS (click to toggle)</th><th>STUDENT'S OWN LOG</th><th>ACTIONS</th></tr></thead><tbody id="rg-body"></tbody></table></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">ATTENDANCE SHORTAGE</div><h3>Defaulters (below 75%)</h3></div></div><div id="rg-defaulters"></div></div>
+          <form id="rg-paste-form" class="panel event-form" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">CLASS LIST</div><h3>Paste a whole class list</h3></div></div><label for="rg-paste">One student per line: roll number, then name</label><textarea id="rg-paste" rows="4" placeholder="09, Riya Nair&#10;10, Arjun Das"></textarea><button class="btn btn-primary full">Import list ＋</button></form>
+          <form id="rg-add-form" class="panel event-form"><div class="panel-heading"><div><div class="eyebrow">CLASS LIST</div><h3>Add a student to the register</h3></div></div><div class="form-two"><div><label for="rg-roll">Roll number</label><input id="rg-roll" placeholder="e.g. 09" required></div><div><label for="rg-name">Student name</label><input id="rg-name" placeholder="e.g. Riya Nair" required></div></div><button class="btn btn-primary full">Add student <span>＋</span></button></form>
+        </section>
+
+        <!-- ============ TIMETABLE (faculty edits, students view) ============ -->
+        <section id="timetable-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">WEEKLY SCHEDULE</div><h2>Class timetable 🗓️</h2><p>Only faculty can change the timetable. Any update appears here for students.</p></div><div class="filter-chip" id="tt-chip">View only</div></div>
+          <div id="tt-faculty-tools" class="manage-grid" hidden>
+            <form id="tt-form" class="panel event-form">
+              <div class="panel-heading"><div><div class="eyebrow">ADD A LECTURE</div><h3>Timetable slot</h3></div><span class="form-icon">＋</span></div>
+              <div class="form-two"><div><label for="tt-day">Day</label><select id="tt-day"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option></select></div><div><label for="tt-room">Room (optional)</label><input id="tt-room" placeholder="e.g. A-101"></div></div>
+              <div class="form-two"><div><label for="tt-start">Start</label><input id="tt-start" type="time" required></div><div><label for="tt-end">End</label><input id="tt-end" type="time" required></div></div>
+              <div class="form-two"><div><label for="tt-code">Subject code</label><input id="tt-code" placeholder="e.g. CS305" required></div><div><label for="tt-subject">Subject name</label><input id="tt-subject" placeholder="e.g. Databases" required></div></div>
+              <label for="tt-prof">Professor</label><input id="tt-prof" placeholder="e.g. Prof. Sharma" required>
+              <button class="btn btn-primary full">Add to timetable <span>↗</span></button>
+            </form>
+            <form id="chg-form" class="panel event-form">
+              <div class="panel-heading"><div><div class="eyebrow">TEACHER ABSENT?</div><h3>Substitution or cancellation</h3></div><span class="form-icon">⇄</span></div>
+              <div class="form-two"><div><label for="chg-date">Date</label><input id="chg-date" type="date" required></div><div><label for="chg-type">What happened</label><select id="chg-type"><option value="substitute">Another teacher takes the class</option><option value="cancelled">Lecture cancelled</option></select></div></div>
+              <label for="chg-slot">Lecture</label><select id="chg-slot"></select>
+              <div id="chg-sub-fields"><label for="chg-prof">Teacher taking the class</label><input id="chg-prof" placeholder="e.g. Prof. Kulkarni"><label for="chg-count">Count this lecture under</label><select id="chg-count"></select></div>
+              <label for="chg-note">Note (optional)</label><input id="chg-note" placeholder="e.g. Prof. Mehta on leave">
+              <button class="btn btn-primary full">Save update <span>↗</span></button>
+            </form>
+          </div>
+          <div class="panel"><div class="panel-heading"><div><div class="eyebrow">THIS WEEK</div><h3>Weekly timetable</h3></div></div><div id="tt-grid" class="tt-grid"></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">CLASS UPDATES</div><h3>Substitutions &amp; cancellations</h3></div></div><div id="tt-changes" class="event-list"></div></div>
+        </section>
+
+        <!-- ============ SYLLABUS TRACKER (student private / faculty coverage) ============ -->
+        <section id="syllabus-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">SYLLABUS</div><h2>Syllabus tracker 📘</h2><p>Break each subject into topics and tick them off as you go.</p></div></div>
+          <div id="sy-banner" class="lock-banner"></div>
+          <div id="sy-summary" class="sy-summary"></div>
+          <div class="panel">
+            <div class="panel-heading"><div><div class="eyebrow">TOPICS</div><h3>Subject topics</h3></div><div class="ctrl-row"><select id="sy-subject" class="ctrl" aria-label="Subject"></select><button type="button" id="sy-import" class="btn btn-outline small-btn">Import from faculty topics</button></div></div>
+            <form id="sy-form" class="event-form"><label for="sy-topic">Add topics (one per line)</label><textarea id="sy-topic" rows="3" placeholder="Unit 1: Arrays&#10;Unit 2: Linked lists"></textarea><button class="btn btn-primary small-btn" style="margin-top:12px">Add topics ＋</button></form>
+            <div id="sy-list" style="margin-top:17px"></div>
+          </div>
+        </section>
+
+        <!-- ============ TO-DO LIST (private per user) ============ -->
+        <section id="todo-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">STAY ORGANISED</div><h2>To-do list ✅</h2><p>Your personal tasks. Only you can see this list.</p></div><div class="filter-chip" id="td-count">0 to do</div></div>
+          <div class="panel">
+            <form id="td-form" class="event-form"><div class="form-two"><div><label for="td-text">New task</label><input id="td-text" placeholder="e.g. Finish DBMS assignment" required></div><div><label for="td-due">Due date (optional)</label><input id="td-due" type="date"></div></div><button class="btn btn-primary small-btn" style="margin-top:12px">Add task ＋</button></form>
+            <div class="table-tools" style="padding:17px 0 6px"><div class="filter-btns"><button type="button" data-td-filter="all" class="on">All</button><button type="button" data-td-filter="active">To do</button><button type="button" data-td-filter="done">Done</button></div><button type="button" id="td-clear" class="text-btn">Clear completed</button></div>
+            <div id="td-list"></div>
+          </div>
+        </section>
+
+        <!-- ============ SUBMISSION DEADLINES ============ -->
+        <section id="deadlines-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">DON'T MISS IT</div><h2>Submission deadlines ⏰</h2><p>Assignments and submissions posted by faculty.</p></div></div>
+          <form id="dl-form" class="panel event-form" hidden><div class="panel-heading"><div><div class="eyebrow">NEW DEADLINE</div><h3>Post a deadline</h3></div><span class="form-icon">＋</span></div><div class="form-two"><div><label for="dl-title">Title</label><input id="dl-title" placeholder="e.g. OS lab journal" required></div><div><label for="dl-subject">Subject</label><select id="dl-subject"></select></div></div><div class="form-two"><div><label for="dl-due">Due date</label><input id="dl-due" type="date" required></div><div><label for="dl-notes">Notes (optional)</label><input id="dl-notes" placeholder="e.g. Submit in class"></div></div><button class="btn btn-primary full">Post deadline <span>↗</span></button></form>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">UPCOMING</div><h3>All deadlines</h3></div></div><div id="dl-list"></div></div>
+        </section>
+      <section id="calendar-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">PLAN YOUR MONTH</div><h2>Combined calendar 📅</h2><p>Lectures, deadlines and events in one place. Click a day for details.</p></div></div>
+          <div class="panel"><div class="panel-heading"><div class="ctrl-row"><button type="button" id="cc-prev" class="btn btn-outline small-btn" aria-label="Previous month">‹</button><strong id="cc-title"></strong><button type="button" id="cc-next" class="btn btn-outline small-btn" aria-label="Next month">›</button></div><p class="hint"><span class="cal-key l"></span>lectures <span class="cal-key d"></span>deadlines <span class="cal-key e"></span>events</p></div><div id="cc-grid" class="cal-grid cc-grid"></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">SELECTED DAY</div><h3 id="cc-day-title">Pick a day</h3></div></div><div id="cc-day"></div></div>
+        </section>
+      </div><footer class="app-footer"><span>CampusLoop <b>·</b> AICTE Activity Tracker</span><span>Small action, big impact. 🌱</span></footer>
+    </main>
+  </section>
+  <div id="announcement-modal" class="modal-backdrop" hidden><div class="modal-card"><button id="close-announcements" class="modal-close" aria-label="Close">×</button><div class="eyebrow">DON'T MISS OUT</div><h2>Campus announcements 📣</h2><p class="muted">Upcoming activities and opportunities, all in one place.</p><div id="modal-notices"></div><div id="modal-announcements" class="event-list"></div></div></div>
+  <div id="profile-modal" class="modal-backdrop" hidden><div class="modal-card"><button type="button" class="modal-close" data-close-profile aria-label="Close">×</button><div id="profile-body"></div></div></div>
+  <button id="theme-toggle" class="theme-fab" type="button" aria-label="Switch to dark mode">🌙</button>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="script.js"></script>
+</body></html>
