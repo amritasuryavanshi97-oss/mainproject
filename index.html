@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusLoop | AICTE Activity Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-bg"></div>
+  <section id="login-view" class="login-shell">
+    <div class="login-art">
+      <div class="brand"><span class="brand-mark">↗</span><span>CampusLoop</span></div>
+      <span class="art-pill pill-yellow">LEARN · LEAD · MAKE AN IMPACT</span>
+      <h1>Your campus life,<br><span>counted.</span></h1>
+      <p>One place for activities, achievements, attendance and your AICTE journey.</p>
+      <div class="art-shapes"><div class="shape shape-orange">✳</div><div class="shape shape-blue">↗</div><div class="shape shape-pink">★</div><div class="art-card"><span>YOUR NEXT MILESTONE</span><strong>100 pts</strong><small>Every small action matters.</small><div class="mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>
+      <div class="art-footer">MADE FOR STUDENT ENERGY <span>✦</span></div>
+    </div>
+    <div class="login-panel"><div class="mobile-brand brand"><span class="brand-mark">↗</span><span>CampusLoop</span></div><div class="eyebrow">WELCOME TO YOUR PORTAL</div><h2>Let's get you in.</h2><p class="muted">Sign in to track your growth and find your next activity.</p>
+      <form id="login-form"><label for="username">Username</label><input id="username" autocomplete="username" required placeholder="e.g. A-01, B-01, C-01, D-01 or faculty"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required placeholder="DIVA / DIVB / DIVC / DIVD / demo123"><button type="button" id="toggle-pass" class="text-btn">Show password</button><p id="login-error" class="error" hidden></p><button class="btn btn-primary full" id="login-btn">Sign in <span>↗</span></button></form>
+      <div class="demo-box">
+        <strong>QUICK DEMO ACCESS</strong>
+        <p>
+          <button type="button" class="demo-chip" data-user="A-01" data-pass="DIVA">A-01 (DIVA)</button>
+          <button type="button" class="demo-chip" data-user="B-01" data-pass="DIVB">B-01 (DIVB)</button>
+          <button type="button" class="demo-chip" data-user="C-01" data-pass="DIVC">C-01 (DIVC)</button>
+          <button type="button" class="demo-chip" data-user="D-01" data-pass="DIVD">D-01 (DIVD)</button>
+          <button type="button" class="demo-chip" data-user="faculty" data-pass="demo123">Faculty</button>
+        </p>
+        <small>Logins: <b>A-01..A-10</b> (Pass: <b>DIVA</b>) · <b>B-01..B-10</b> (<b>DIVB</b>) · <b>C-01..C-10</b> (<b>DIVC</b>) · <b>D-01..D-10</b> (<b>DIVD</b>) · Faculty: <b>demo123</b></small>
+      </div>
+      <div class="login-bottom">🌱 <span>Small action, big impact.</span></div>
+    </div>
+  </section>
+
+  <section id="dashboard-view" class="app-shell" hidden>
+    <aside class="sidebar"><a class="brand side-brand" href="#"><span class="brand-mark">↗</span><span>CampusLoop</span></a><div class="side-label">WORKSPACE</div><nav id="side-nav"><button class="nav-item active" data-section="overview"><span>◫</span> Overview</button><button class="nav-item" data-section="activities"><span>✳</span> Activities <i id="nav-event-count">0</i></button><button class="nav-item student-nav" data-section="records"><span>▤</span> My records</button><button class="nav-item faculty-nav" data-section="students" hidden><span>♙</span> Student records</button><button class="nav-item faculty-nav" data-section="manage" hidden><span>＋</span> Manage events</button><button class="nav-item student-nav" data-section="attendance"><span>%</span> Attendance</button><button class="nav-item faculty-nav" data-section="register" hidden><span>🗒</span> Register</button><button class="nav-item" data-section="marks"><span>📊</span> Marks sheet</button><button class="nav-item" data-section="timetable"><span>🗓</span> Timetable</button><button class="nav-item" data-section="syllabus"><span>📘</span> Syllabus</button><button class="nav-item" data-section="todo"><span>✅</span> To-do <i id="nav-todo-count" hidden>0</i></button><button class="nav-item" data-section="deadlines"><span>⏰</span> Deadlines <i id="nav-dl-count" hidden>0</i></button><button class="nav-item" data-section="calendar"><span>📅</span> Calendar</button></nav><div class="sidebar-bottom"><div class="side-help"><span class="help-icon">✦</span><strong>Keep growing!</strong><p>Every activity is a new story to add to your journey.</p></div><button id="logout-btn" class="nav-item logout"><span>↪</span> Log out</button></div></aside>
+    <main class="main-area">
+      <header class="topbar">
+        <div><div class="breadcrumb">CAMPUS / <span id="role-label">STUDENT SPACE</span></div><button type="button" id="mobile-menu-btn" class="btn btn-outline small-btn mobile-only" aria-label="Open menu">☰</button><h1 id="page-title">Your overview</h1></div>
+        <div class="top-actions">
+          <div class="division-picker">
+            <label for="global-division">Class:</label>
+            <select id="global-division" class="ctrl">
+              <option value="CSE-A">CSE-A (Div A)</option>
+              <option value="CSE-B">CSE-B (Div B)</option>
+              <option value="CSE-C">CSE-C (Div C)</option>
+              <option value="CSE-D">CSE-D (Div D)</option>
+            </select>
+            <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+  <button type="button" class="nav-item" data-section="overview"><span>🏠</span><small>Home</small></button>
+  <button type="button" class="nav-item student-nav" data-section="attendance"><span>📊</span><small>Attend</small></button>
+  <button type="button" class="nav-item faculty-nav" data-section="register" hidden><span>🗒</span><small>Register</small></button>
+  <button type="button" class="nav-item" data-section="marks"><span>📋</span><small>Marks</small></button>
+  <button type="button" class="nav-item" data-section="timetable"><span>🗓</span><small>Schedule</small></button>
+  <button type="button" class="nav-item" data-section="todo"><span>✅</span><small>Tasks</small></button>
+</nav>
+          </div>
+          
+          <button id="announcement-btn" class="icon-btn" aria-label="Announcements">♧<i id="announcement-dot"></i></button>
+          <div class="profile"><div class="avatar" id="avatar">AS</div><div><strong id="profile-name">Aditi Singh</strong><small id="profile-role">Student</small></div></div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <section id="overview-section" class="page-section">
+          <div class="welcome-banner"><div class="welcome-copy"><span class="banner-kicker" id="welcome-kicker">YOUR JOURNEY, YOUR PACE</span><h2 id="welcome-title">Hey Aditi, ready to grow? <span>✌</span></h2><p>Find activities you love, collect experiences, and make your campus years count.</p><button class="btn btn-dark student-only" id="explore-btn">Explore activities <span>→</span></button></div><div class="banner-illustration"><div class="sun"></div><div class="plant-pot">🌱</div><div class="floating-note note-one">+1 pt</div><div class="floating-note note-two">✦ GO DO GOOD</div><div class="banner-squiggle">〰</div></div></div>
+          
+          <div id="fac-dash" class="faculty-only" hidden>
+            <div class="stats-grid fac-stats">
+              <article class="stat-card stat-lilac"><div class="stat-top"><span>Students below 75%</span><span class="stat-icon">⚠</span></div><div class="stat-number"><strong id="fd-below">0</strong></div><div class="stat-foot"><span>Need a conversation</span><span class="spark">↗</span></div></article>
+              <article class="stat-card stat-yellow"><div class="stat-top"><span>Lectures today</span><span class="stat-icon">🗓</span></div><div class="stat-number"><strong id="fd-today">0</strong></div><div class="stat-foot"><span>On the timetable</span><span class="spark">✦</span></div></article>
+              <article class="stat-card stat-blue"><div class="stat-top"><span>Deadlines due this week</span><span class="stat-icon">⏰</span></div><div class="stat-number"><strong id="fd-deadlines">0</strong></div><div class="stat-foot"><span>Next 7 days</span><span class="spark">↗</span></div></article>
+            </div>
+            <div class="dashboard-grid fac-gap">
+              <div class="panel"><div class="panel-heading"><div><div class="eyebrow">NEEDS YOUR ATTENTION</div><h3>Today's to-do</h3></div></div><div id="fd-attention"></div></div>
+              <div class="panel"><div class="panel-heading"><div><div class="eyebrow">TODAY</div><h3>Today's timetable</h3></div></div><div id="fd-today-list"></div><div class="ctrl-row" style="margin-top:12px"><button type="button" id="fd-take" class="btn btn-primary small-btn">Take attendance ↗</button><button type="button" id="fd-create" class="btn btn-outline small-btn">Create event ＋</button></div></div>
+            </div>
+            <div class="dashboard-grid fac-gap">
+              <div class="panel"><div class="panel-heading"><div><div class="eyebrow">CLASS ATTENDANCE</div><h3>Class snapshot</h3></div></div><div id="fd-class"></div><p class="hint">The red line marks the 75% minimum.</p></div>
+              <div class="panel"><div class="panel-heading"><div><div class="eyebrow">SYLLABUS</div><h3>Coverage by subject</h3></div></div><div id="fd-syllabus"></div></div>
+            </div>
+            <div class="dashboard-grid fac-gap">
+              <div class="panel"><div class="panel-heading"><div><div class="eyebrow">DOWNLOADS</div><h3>Reports (CSV)</h3></div></div><p class="muted">Ready for department submissions.</p><div class="report-btns"><button type="button" class="btn btn-outline small-btn" data-report="class">Class attendance ↓</button><button type="button" class="btn btn-outline small-btn" data-report="defaulters">Defaulters ↓</button><button type="button" class="btn btn-outline small-btn" data-report="points">AICTE points per student ↓</button></div></div>
+              <div class="panel"><div class="panel-heading"><div><div class="eyebrow">ANNOUNCE</div><h3>Notices to students</h3></div></div><form id="notice-form" class="event-form"><label for="notice-text">Post a notice (students see it under announcements)</label><textarea id="notice-text" rows="2" placeholder="e.g. Tomorrow's DS lecture is shifted to 11 AM" required></textarea><button class="btn btn-primary small-btn" style="margin-top:12px">Post notice ↗</button></form><div id="fd-notices" style="margin-top:14px"></div></div>
+            </div>
+          </div>
+
+          <div class="panel glance student-only"><div class="panel-heading"><div><div class="eyebrow" id="glance-date">TODAY</div><h3>Today at a glance</h3></div></div><div id="glance-items" class="glance-items"></div></div>
+          
+          <div class="section-heading"><div><div class="eyebrow">YOUR SNAPSHOT</div><h2>Progress at a glance</h2></div><span class="tiny-tag">ACADEMIC YEAR 2026–27</span></div>
+          <div class="stats-grid"><article class="stat-card stat-lilac student-only"><div class="stat-top"><span>Activity points</span><span class="stat-icon">✳</span></div><div class="stat-number"><strong id="points">0</strong><span>/ <b id="target">100</b></span></div><div class="stat-foot"><span id="points-caption">Your journey starts here</span><span class="spark">↗</span></div></article><article class="stat-card stat-yellow"><div class="stat-top"><span>Approved activities</span><span class="stat-icon">✓</span></div><div class="stat-number"><strong id="approved-count">0</strong></div><div class="stat-foot"><span>Achievements unlocked</span><span class="spark">✦</span></div></article><article class="stat-card stat-blue"><div class="stat-top"><span>Awaiting approval</span><span class="stat-icon">◷</span></div><div class="stat-number"><strong id="pending-count">0</strong></div><div class="stat-foot"><span>Faculty will review these</span><span class="spark">↗</span></div></article><article class="stat-card stat-peach student-only"><div class="stat-top"><span>Upcoming events</span><span class="stat-icon">▦</span></div><div class="stat-number"><strong id="upcoming-count">0</strong></div><div class="stat-foot"><span>New ways to participate</span><span class="spark">✦</span></div></article></div>
+          <div class="dashboard-grid student-only"><div class="panel progress-panel"><div class="panel-heading"><div><div class="eyebrow">LITTLE BY LITTLE</div><h3>Your AICTE journey</h3></div><span class="round-icon">↗</span></div><div class="progress-summary"><div><strong id="progress-percent">0%</strong><p id="goal-message">Every point moves you forward.</p></div><div class="progress-ring" id="progress-ring"><div><strong id="ring-value">0</strong><small>POINTS</small></div></div></div><div class="progress-track"><div id="bar" class="progress-fill"></div></div><div class="milestones"><span>0 pts</span><span>50 pts</span><span>100 pts</span></div><div class="milestone-note">🌟 <span id="milestone-copy">Start with one activity this week.</span></div></div>
+            <div class="panel ai-panel"><div class="panel-heading"><div><div class="eyebrow">YOUR PERSONAL NUDGE</div><h3>Smart activity tip <span class="ai-badge">AI ✦</span></h3></div><span class="ai-spark">✧</span></div><p id="ai-tip">Your suggestions will appear here.</p><div class="tip-footer"><span>BASED ON YOUR PROGRESS</span><button id="refresh-tip" class="text-btn">New tip ↻</button></div></div></div>
+          <div class="dashboard-grid lower-grid"><div class="panel events-panel"><div class="panel-heading"><div><div class="eyebrow">WHAT'S HAPPENING</div><h3>Coming up on campus</h3></div><button class="text-btn" data-go="activities">View all →</button></div><div id="announcements" class="event-list"></div></div><div class="panel map-panel student-only"><div class="panel-heading"><div><div class="eyebrow">FIND YOUR WAY</div><h3>Activity map</h3></div><span class="map-live"><i></i> LIVE MAP</span></div><div id="map"></div><div class="map-legend"><span><i class="legend-blue"></i> Events</span><span><i class="legend-orange"></i> Your location</span><button id="locate-map" class="text-btn">Locate me ↗</button></div><p class="map-caption">Event pins show the venue. Allow location access to compare your position with the event radius.</p></div></div>
+        </section>
+
+        <!-- ============ ACTIVITIES ============ -->
+        <section id="activities-section" class="page-section" hidden><div class="page-intro"><div><div class="eyebrow" id="act-eyebrow">GET INVOLVED</div><h2 id="act-title">Find your next thing ✨</h2><p id="act-sub">Pick an activity, show up, and let your participation count.</p></div><div class="filter-chip">✳ <span id="activity-total">0 activities</span></div></div><div id="all-activities" class="activities-grid"></div></section>
+
+        <!-- ============ STUDENT: MY RECORDS & SUBMISSION ============ -->
+        <section id="records-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">YOUR FOOTPRINT</div><h2>My activity records</h2><p>Keep track of your submissions, upload certificates, and monitor earned points.</p></div></div>
+          
+          <form id="student-upload-form" class="panel event-form" style="margin-bottom:17px">
+            <div class="panel-heading"><div><div class="eyebrow">SUBMIT PROOF</div><h3>Claim AICTE Activity Points</h3></div><span class="form-icon">✳</span></div>
+            <label for="claim-title">Activity Title</label>
+            <input id="claim-title" required placeholder="e.g. Smart India Hackathon 2026 Finals / NSS Blood Donation Camp">
+            <div class="form-two">
+              <div>
+                <label for="claim-category">AICTE Activity Head (Point Cap)</label>
+                <select id="claim-category" required>
+                  <option value="NSS">NSS / NCC (Max 20)</option>
+                  <option value="Sports">Sports & Games (Max 20)</option>
+                  <option value="Technical">Technical / Hackathon (Max 20)</option>
+                  <option value="Innovation">Innovation & Entrepreneurship (Max 20)</option>
+                  <option value="Leadership">Leadership & Management (Max 20)</option>
+                </select>
+              </div>
+              <div>
+                <label for="claim-points">Points Claimed</label>
+                <input id="claim-points" type="number" min="1" max="50" required placeholder="e.g. 20">
+              </div>
+            </div>
+            <div class="form-two">
+              <div>
+                <label for="claim-date">Date Completed</label>
+                <input id="claim-date" type="date" required>
+              </div>
+              <div>
+                <label for="claim-file">Certificate / Proof (Image or PDF)</label>
+                <input id="claim-file" type="file" accept="image/*,.pdf" required>
+              </div>
+            </div>
+            <p id="claim-head-rule" class="hint" style="margin-top:4px"></p>
+            <button class="btn btn-primary full">Upload and Submit for Review <span>↗</span></button>
+          </form>
+
+          <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>ACTIVITY</th><th>CATEGORY</th><th>DATE</th><th>POINTS</th><th>PROOF</th><th>STATUS / REMARKS</th></tr></thead><tbody id="my-records"></tbody></table></div></div>
+          <div id="pts-charts" class="dashboard-grid pts-charts"><div class="panel"><div class="panel-heading"><div><div class="eyebrow">APPROVED POINTS</div><h3>Points by category</h3></div></div><div id="pts-chart"></div></div><div class="panel"><div class="panel-heading"><div><div class="eyebrow">OFFICIAL RECORD</div><h3>Activity transcript</h3></div></div><p class="muted">Download a PDF with your AICTE points, categories and attendance summary.</p><button type="button" id="pdf-btn" class="btn btn-primary">Download transcript (PDF) ↓</button></div></div>
+          
+          <div class="panel scan-panel"><div class="panel-heading"><div><div class="eyebrow">CHECK IN</div><h3>Scan an event QR code</h3></div><span class="qr-illustration">▦</span></div><p class="muted">Scan the QR displayed at the venue or enter the event code shared by faculty. Location is checked before submission.</p><div class="scan-controls"><select id="student-event-select" aria-label="Choose event"><option value="">Choose an event</option></select><input id="qr-code" placeholder="Event code, e.g. TREE2026"><button id="submit-qr" class="btn btn-primary">Submit check-in ↗</button><button id="scan-btn" class="btn btn-outline">▦ Scan QR</button></div><video id="camera" playsinline hidden></video><p id="location-status" class="location-status">📍 Location has not been checked yet.</p><button id="checkin-btn" class="text-btn">Check my location ↗</button></div>
+        </section>
+
+        <!-- ============ FACULTY: STUDENT RECORDS & QUEUES ============ -->
+        <section id="students-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">FACULTY WORKSPACE</div><h2>Student records 📚</h2><p>Review participation, verify AICTE certificates, and evaluate OD/Leave applications.</p></div><div class="filter-chip"><span id="faculty-student-count">0</span> students</div></div>
+          <div class="stats-grid faculty-stats"><article class="stat-card stat-lilac"><div class="stat-top">Registered students <span class="stat-icon">♙</span></div><div class="stat-number"><strong id="faculty-total-students">0</strong></div></article><article class="stat-card stat-yellow"><div class="stat-top">Average attendance <span class="stat-icon">%</span></div><div class="stat-number"><strong id="fr-avg">—</strong><strong id="faculty-total-points" hidden>0</strong></div></article><article class="stat-card stat-blue"><div class="stat-top">Pending Verification <span class="stat-icon">◷</span></div><div class="stat-number"><strong id="faculty-pending-count">0</strong></div></article></div>
+          
+          <div class="panel table-panel">
+            <div class="panel-heading" style="padding:18px 20px 0"><div><div class="eyebrow">ON-DUTY & LEAVE QUEUE</div><h3>Pending OD / Leave Requests</h3></div><span class="filter-chip" id="od-pending-count">0 waiting</span></div>
+            <div id="pending-od-list" class="approval-list"></div>
+          </div>
+
+          <div class="panel table-panel"><div class="table-tools"><h3>Student directory</h3><input id="student-search" placeholder="Search by ID (e.g. A-01) or Name…"></div><div class="table-scroll"><table><thead><tr><th>STUDENT</th><th>ACTIVITIES</th><th>APPROVED POINTS</th><th>IN REVIEW</th><th>PROGRESS</th></tr></thead><tbody id="student-records"></tbody></table></div></div>
+          
+          <div class="panel table-panel"><div class="panel-heading" style="padding:18px 20px 0"><div><div class="eyebrow">AICTE ACTIVITY QUEUE</div><h3>Pending Certificate Approvals</h3></div><span class="filter-chip" id="approval-count">0 waiting</span></div><div id="pending-approvals" class="approval-list"></div></div>
+        </section>
+
+        <!-- ============ FACULTY: MANAGE EVENTS ============ -->
+        <section id="manage-section" class="page-section" hidden><div class="page-intro"><div><div class="eyebrow">FACULTY TOOLS</div><h2>Make something happen 🎉</h2><p>Create events, set venue boundaries, and share the QR check-in code.</p></div></div><div class="manage-grid"><form id="event-form" class="panel event-form"><div class="panel-heading"><div><div class="eyebrow">NEW ACTIVITY</div><h3>Create an event</h3></div><span class="form-icon">＋</span></div><label for="event-name">Event name</label><input id="event-name" required placeholder="e.g. Campus clean-up drive"><label for="event-category">AICTE category</label><select id="event-category"><option value="NSS">NSS / Social</option><option value="Sports">Sports</option><option value="Technical">Technical</option><option value="Innovation">Innovation</option><option value="General">General</option></select><label for="event-description">Short description</label><textarea id="event-description" rows="2" placeholder="What will students do?"></textarea><div class="form-two"><div><label for="event-date">Date</label><input id="event-date" type="date" required></div><div><label for="event-duration">Duration (hours)</label><input id="event-duration" type="number" min="1" max="24" required value="3"></div></div><label for="event-venue">Venue name</label><input id="event-venue" placeholder="e.g. Main quadrangle"><div class="form-two"><div><label for="event-lat">Venue latitude</label><input id="event-lat" type="number" step="any" required value="19.0760"></div><div><label for="event-lon">Venue longitude</label><input id="event-lon" type="number" step="any" required value="72.8777"></div></div><div class="form-two"><div><label for="event-radius">Allowed radius (metres)</label><input id="event-radius" type="number" min="20" max="2000" required value="100"></div><div><label for="event-qr">QR / event code</label><input id="event-qr" required placeholder="e.g. GREEN26"></div></div><p class="form-hint">💡 AICTE points will be assigned based on verified certificates or authorized hours.</p><button class="btn btn-primary full">Publish event <span>↗</span></button></form><div class="manage-side"><div class="panel location-form"><div class="panel-heading"><div><div class="eyebrow">VENUE SETUP</div><h3>Set event location</h3></div><span class="round-icon">⌖</span></div><p class="muted">Click on the map to choose coordinates, or use your current location. The selected location is used for the attendance radius.</p><div id="faculty-map"></div><button type="button" id="use-current-location" class="btn btn-outline full">⌖ Use my current location</button><p id="faculty-map-status" class="map-caption">Default coordinates are loaded. Click the map to change them.</p></div><div class="panel"><div class="panel-heading"><div><div class="eyebrow">PUBLISHED</div><h3>Your events</h3></div><span class="round-icon">▦</span></div><div id="all-events" class="event-list"></div></div></div></div></section>
+      
+        <!-- ============ STUDENT: ATTENDANCE & BUNK PREDICTOR ============ -->
+        <section id="attendance-section" class="page-section" hidden>
+          <div class="page-intro">
+            <div><div class="eyebrow">LECTURE ATTENDANCE</div><h2>Attendance &amp; bunk predictor 📊</h2><p>Log lectures and see exactly how many you can skip while staying above 75%.</p></div>
+            <button type="button" class="btn btn-primary small-btn" id="open-od-modal">Apply for Leave / OD ↗</button>
+          </div>
+          
+          <div class="stats-grid">
+            <article class="stat-card stat-lilac"><div class="stat-top"><span>Overall attendance</span><span class="stat-icon">%</span></div><div class="stat-number"><strong id="ac-pct">—</strong></div><div class="stat-foot"><span>OD & Approved leaves waived</span><span class="spark">↗</span></div></article>
+            <article class="stat-card stat-yellow"><div class="stat-top"><span>Lectures attended</span><span class="stat-icon">✓</span></div><div class="stat-number"><strong id="ac-attended">0</strong><span>/ <b id="ac-total">0</b></span></div><div class="stat-foot"><span>Attended / Waived out of held</span><span class="spark">✦</span></div></article>
+            <article class="stat-card stat-blue"><div class="stat-top"><span id="ac-skip-label">Safe skips left</span><span class="stat-icon">⏱</span></div><div class="stat-number"><strong id="ac-skip">0</strong></div><div class="stat-foot"><span>Based on the 75% rule</span><span class="spark">↗</span></div></article>
+            <article class="stat-card stat-peach"><div class="stat-top"><span>Status</span><span class="stat-icon">🚦</span></div><div id="ac-status" class="ac-badge ac-neutral">No data yet</div><div class="stat-foot"><span>Keep it above 75%</span><span class="spark">✦</span></div></article>
+          </div>
+          
+          <div id="ac-message" class="panel callout">Log your lectures below to see how many you can skip.</div>
+
+          <div class="panel" style="margin-top:17px">
+            <div class="panel-heading"><div><div class="eyebrow">APPLICATION TRACKER</div><h3>My Leave &amp; On-Duty (OD) Requests</h3></div></div>
+            <div class="table-scroll"><table class="data-table"><thead><tr><th>TYPE</th><th>DATES</th><th>REASON</th><th>STATUS</th><th>FACULTY REMARKS</th></tr></thead><tbody id="my-od-records"></tbody></table></div>
+          </div>
+
+          <div class="panel whatif"><div class="panel-heading"><div><div class="eyebrow">PLAN AHEAD</div><h3>What if I skip?</h3></div></div><div class="ctrl-row"><label>I will skip <input id="wi-skip" type="number" min="0" value="1" class="ctrl wi-num"> lectures</label><label>and attend <input id="wi-attend" type="number" min="0" value="0" class="ctrl wi-num"> lectures</label></div><p id="wi-result" class="callout"></p></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">MONTH VIEW</div><h3>Attendance calendar</h3></div><div class="ctrl-row"><button type="button" id="cal-prev" class="btn btn-outline small-btn" aria-label="Previous month">‹</button><strong id="cal-title"></strong><button type="button" id="cal-next" class="btn btn-outline small-btn" aria-label="Next month">›</button></div></div><div id="cal-grid" class="cal-grid"></div><p class="hint"><span class="cal-key g"></span>all attended/OD <span class="cal-key r"></span>missed at least one <span class="cal-key n"></span>no data</p></div>
+          <div class="dashboard-grid ac-charts"><div class="panel"><div class="panel-heading"><div><div class="eyebrow">BY SUBJECT</div><h3>Attendance per subject</h3></div></div><div id="ac-chart-subjects"></div></div><div class="panel"><div class="panel-heading"><div><div class="eyebrow">OVER TIME</div><h3>Attendance trend</h3></div></div><div id="ac-chart-trend"></div></div></div>
+          
+          <div class="dashboard-grid">
+            <div class="panel table-panel"><div class="table-tools"><h3>Subject-wise predictor (75% Minimum Mandatory)</h3></div><div class="table-scroll"><table class="data-table"><thead><tr><th>SUBJECT</th><th>ATTENDED</th><th>TOTAL</th><th>PERCENT</th><th>PREDICTOR &amp; FORECAST</th></tr></thead><tbody id="ac-subjects"></tbody></table></div></div>
+            <div class="panel"><div class="panel-heading"><div><div class="eyebrow">LOG YOUR LECTURES</div><h3>Lectures on a day</h3></div><input type="date" id="ac-date" class="ctrl" aria-label="Choose date"></div><div id="ac-log"></div><p class="hint">Tap to toggle your log. Faculty entries and approved ODs lock the lecture automatically.</p></div>
+          </div>
+        </section>
+
+        <!-- ============ FACULTY: ATTENDANCE REGISTER ============ -->
+        <section id="register-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">FACULTY WORKSPACE</div><h2>Attendance register 🗒️</h2><p>Manage daily attendance, toggle statuses, and audit past modifications. Use the Class selector in the top bar to switch between CSE-A, CSE-B, CSE-C, and CSE-D.</p></div></div>
+          <div class="panel">
+            <div class="register-bar">
+              <input type="date" id="rg-date" class="ctrl" aria-label="Date">
+              <select id="rg-slot" class="ctrl" aria-label="Lecture"></select>
+              <button type="button" class="btn btn-outline small-btn" id="rg-all-present">Mark all present</button>
+              <button type="button" class="btn btn-outline small-btn" id="rg-all-absent">Mark all absent</button>
+              <button type="button" class="btn btn-primary small-btn" id="rg-save">Save register ↗</button>
+              <button type="button" class="btn btn-outline small-btn" id="rg-export">Export CSV ↓</button>
+            </div>
+            <div class="counters"><div class="counter"><b id="rg-present">0</b>Present</div><div class="counter"><b id="rg-absent">0</b>Absent</div><div class="counter"><b id="rg-od">0</b>OD / Leave</div><div class="counter"><b id="rg-total">0</b>Total</div><div class="counter"><b id="rg-percent">—</b>Present %</div></div>
+            <p id="rg-note" class="hint"></p>
+          </div>
+
+          <div class="panel table-panel" style="margin-top:17px"><div class="table-scroll sheet-scroll"><table class="data-table sheet"><thead><tr><th class="rownum">#</th><th>ROLL NO</th><th>STUDENT</th><th>STATUS</th><th>STUDENT'S LOG</th><th>ACTIONS</th></tr></thead><tbody id="rg-body"></tbody></table></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">ATTENDANCE SHORTAGE</div><h3>Subject Defaulters (Below 75%)</h3></div></div><div id="rg-defaulters"></div></div>
+          
+          <div class="panel" style="margin-top:17px">
+            <div class="panel-heading"><div><div class="eyebrow">AUDIT LOG</div><h3>Historical Attendance Audit Trail</h3></div></div>
+            <div class="table-scroll"><table class="data-table"><thead><tr><th>TIMESTAMP</th><th>MODIFIED BY</th><th>DATE</th><th>STUDENT</th><th>SLOT</th><th>CHANGE</th><th>REASON</th></tr></thead><tbody id="rg-audit-trail"></tbody></table></div>
+          </div>
+
+          <form id="rg-paste-form" class="panel event-form" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">CLASS LIST</div><h3>Paste a class roster for current division</h3></div></div><label for="rg-paste">One student per line: roll number, then name</label><textarea id="rg-paste" rows="4" placeholder="A-11, Riya Nair&#10;A-12, Arjun Das"></textarea><button class="btn btn-primary full">Import list ＋</button></form>
+          <form id="rg-add-form" class="panel event-form"><div class="panel-heading"><div><div class="eyebrow">CLASS LIST</div><h3>Add single student</h3></div></div><div class="form-two"><div><label for="rg-roll">Roll number</label><input id="rg-roll" placeholder="e.g. A-11" required></div><div><label for="rg-name">Student name</label><input id="rg-name" placeholder="e.g. Riya Nair" required></div></div><button class="btn btn-primary full">Add student <span>＋</span></button></form>
+        </section>
+
+       
+       
+        <!-- ============ TIMETABLE ============ -->
+        <section id="timetable-section" class="page-section" hidden>
+          <div class="page-intro">
+            <div>
+              <div class="eyebrow">WEEKLY SCHEDULE</div>
+              <h2>Class timetable 🗓️</h2>
+              <p>Timetable is partitioned by Division/Class.</p>
+            </div>
+            <div class="ctrl-row">
+              <label for="tt-division-select" class="faculty-only" style="font-weight:700;font-size:12px;">Target Division:</label>
+              <select id="tt-division-select" class="ctrl faculty-only" style="padding:7px 10px;font-weight:700;">
+                <option value="CSE-A">Div A (CSE-A)</option>
+                <option value="CSE-B">Div B (CSE-B)</option>
+                <option value="CSE-C">Div C (CSE-C)</option>
+                <option value="CSE-D">Div D (CSE-D)</option>
+              </select>
+              <div class="filter-chip" id="tt-chip">View only</div>
+            </div>
+          </div>
+          <div id="tt-faculty-tools" class="manage-grid" hidden>
+            <form id="tt-form" class="panel event-form">
+              <div class="panel-heading"><div><div class="eyebrow">ADD A LECTURE</div><h3>Timetable slot</h3></div><span class="form-icon">＋</span></div>
+              <div class="form-two"><div><label for="tt-day">Day</label><select id="tt-day"><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option></select></div><div><label for="tt-room">Room (optional)</label><input id="tt-room" placeholder="e.g. A-101"></div></div>
+              <div class="form-two"><div><label for="tt-start">Start</label><input id="tt-start" type="time" required></div><div><label for="tt-end">End</label><input id="tt-end" type="time" required></div></div>
+              <div class="form-two"><div><label for="tt-code">Subject code</label><input id="tt-code" placeholder="e.g. CS305" required></div><div><label for="tt-subject">Subject name</label><input id="tt-subject" placeholder="e.g. Databases" required></div></div>
+              <label for="tt-prof">Professor</label><input id="tt-prof" placeholder="e.g. Prof. Sharma" required>
+              <div style="display:flex;gap:8px;">
+                <button type="submit" class="btn btn-primary full">Add to timetable <span>↗</span></button>
+                <button type="button" id="tt-cancel-edit" class="btn btn-outline" hidden onclick="resetTimetableForm(); renderTimetable();">Cancel</button>
+              </div>
+            </form>
+            <form id="chg-form" class="panel event-form">
+              <div class="panel-heading"><div><div class="eyebrow">TEACHER ABSENT?</div><h3>Substitution or cancellation</h3></div><span class="form-icon">⇄</span></div>
+              <div class="form-two"><div><label for="chg-date">Date</label><input id="chg-date" type="date" required></div><div><label for="chg-type">What happened</label><select id="chg-type"><option value="substitute">Another teacher takes the class</option><option value="cancelled">Lecture cancelled</option></select></div></div>
+              <label for="chg-slot">Lecture</label><select id="chg-slot"></select>
+              <div id="chg-sub-fields"><label for="chg-prof">Teacher taking the class</label><input id="chg-prof" placeholder="e.g. Prof. Kulkarni"><label for="chg-count">Count this lecture under</label><select id="chg-count"></select></div>
+              <label for="chg-note">Note (optional)</label><input id="chg-note" placeholder="e.g. Prof. Mehta on leave">
+              <button class="btn btn-primary full">Save update <span>↗</span></button>
+            </form>
+          </div>
+          <div class="panel"><div class="panel-heading"><div><div class="eyebrow">THIS WEEK</div><h3>Weekly timetable</h3></div></div><div id="tt-grid" class="tt-grid"></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">CLASS UPDATES</div><h3>Substitutions &amp; cancellations</h3></div></div><div id="tt-changes" class="event-list"></div></div>
+        </section>
+        <!-- ============ MARKS ENTRY & SCORECARD (SPREADSHEET WITH DOP & DOC) ============ -->
+        <section id="marks-section" class="page-section" hidden>
+          <div class="page-intro">
+            <div>
+              <div class="eyebrow" id="mk-eyebrow">PRACTICAL &amp; FA EVALUATION</div>
+              <h2 id="mk-title">Practical &amp; FA Marks Sheet 📊</h2>
+              <p id="mk-sub">Spreadsheet with DOP (Date of Performance), DOC (Date of Checking), Marks for EXPT 1–10, FA 1, and FA 2.</p>
+            </div>
+            <div class="ctrl-row">
+              <label for="mk-division" class="faculty-only" style="font-weight:700;font-size:12px;">Division:</label>
+              <select id="mk-division" class="ctrl faculty-only" style="padding:8px 10px;font-weight:700;">
+                <option value="CSE-A">CSE-A (Div A)</option>
+                <option value="CSE-B">CSE-B (Div B)</option>
+                <option value="CSE-C">CSE-C (Div C)</option>
+                <option value="CSE-D">CSE-D (Div D)</option>
+              </select>
+              <label for="mk-subject" style="font-weight:700;font-size:12px;">Subject:</label>
+              <select id="mk-subject" class="ctrl" style="padding:8px 10px;font-weight:700;"></select>
+            </div>
+          </div>
+
+          <!-- FACULTY: GOOGLE SHEETS STYLE EDITABLE GRID WITH DOP & DOC -->
+          <div id="mk-faculty-wrap" class="panel table-panel" hidden>
+            <div class="table-tools" style="border-bottom:1px solid var(--line);background:#f8f9fa;">
+              <div>
+                <h3 id="mk-sheet-heading" style="font-family:'Times New Roman',serif;font-size:17px;letter-spacing:0.3px;">PRACTICAL MARKS SHEET</h3>
+                <small class="muted">Enter dates (e.g. <b>12/08</b>) under <b>DOP / DOC</b>, and marks (<b>0–100</b> or <b>AB</b>) under <b>MKS</b>. Use Arrow keys / Enter to navigate.</small>
+              </div>
+              <div class="ctrl-row">
+                <button type="button" id="mk-save-btn" class="btn btn-primary small-btn">💾 Save sheet</button>
+                <button type="button" id="mk-export-btn" class="btn btn-outline small-btn">Export CSV ↓</button>
+                <button type="button" id="mk-clear-btn" class="btn btn-outline small-btn">Clear subject marks</button>
+              </div>
+            </div>
+            <div class="table-scroll mk-sheet-scroll">
+              <table class="mk-spreadsheet" id="mk-table">
+                <thead id="mk-thead"></thead>
+                <tbody id="mk-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+         <!-- ============ MARKS ENTRY & SCORECARD (SPREADSHEET WITH DOP & DOC) ============ -->
+        <section id="marks-section" class="page-section" hidden>
+          <div class="page-intro">
+            <div>
+              <div class="eyebrow" id="mk-eyebrow">PRACTICAL &amp; FA EVALUATION</div>
+              <h2 id="mk-title">Practical &amp; FA Marks Sheet 📊</h2>
+              <p id="mk-sub">Spreadsheet with DOP (Date of Performance), DOC (Date of Checking), Marks for EXPT 1–10, FA 1, and FA 2.</p>
+            </div>
+            <div class="ctrl-row">
+              <label for="mk-division" class="faculty-only" style="font-weight:700;font-size:12px;">Division:</label>
+              <select id="mk-division" class="ctrl faculty-only" style="padding:8px 10px;font-weight:700;">
+                <option value="CSE-A">CSE-A (Div A)</option>
+                <option value="CSE-B">CSE-B (Div B)</option>
+                <option value="CSE-C">CSE-C (Div C)</option>
+                <option value="CSE-D">CSE-D (Div D)</option>
+              </select>
+              <label for="mk-subject" style="font-weight:700;font-size:12px;">Subject:</label>
+              <select id="mk-subject" class="ctrl" style="padding:8px 10px;font-weight:700;"></select>
+            </div>
+          </div>
+
+          <!-- FACULTY: GOOGLE SHEETS STYLE EDITABLE GRID WITH DOP & DOC -->
+          <div id="mk-faculty-wrap" class="panel table-panel" hidden>
+            <div class="table-tools" style="border-bottom:1px solid var(--line);">
+              <div>
+                <h3 id="mk-sheet-heading" style="font-family:'Times New Roman',serif;font-size:17px;letter-spacing:0.3px;">PRACTICAL MARKS SHEET</h3>
+                <small class="muted">Enter dates (e.g. <b>12/08</b>) under <b>DOP / DOC</b>, and marks (<b>0–100</b> or <b>AB</b>) under <b>MKS</b>. Use Arrow keys / Enter to navigate.</small>
+              </div>
+              <div class="ctrl-row">
+                <button type="button" id="mk-save-btn" class="btn btn-primary small-btn">💾 Save sheet</button>
+                <button type="button" id="mk-export-btn" class="btn btn-outline small-btn">Export CSV ↓</button>
+                <button type="button" id="mk-clear-btn" class="btn btn-outline small-btn">Clear subject marks</button>
+              </div>
+            </div>
+            <div class="table-scroll mk-sheet-scroll">
+              <table class="mk-spreadsheet" id="mk-table">
+                <thead id="mk-thead"></thead>
+                <tbody id="mk-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- STUDENT: MY MARKS SCORECARD WITH DOP & DOC -->
+          <div id="mk-student-wrap" class="panel table-panel" hidden>
+            <div class="table-tools" style="border-bottom:1px solid var(--line);">
+              <div>
+                <h3>My Subject-Wise Practical &amp; FA Scorecard (with DOP &amp; DOC)</h3>
+                <small class="muted">Live DOP, DOC, and practical marks published by faculty for your division.</small>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="mk-spreadsheet">
+                <thead id="mk-student-thead"></thead>
+                <tbody id="mk-student-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+          <!-- FACULTY: GOOGLE SHEETS STYLE EDITABLE GRID -->
+          <div id="mk-faculty-wrap" class="panel table-panel" hidden>
+            <div class="table-tools" style="border-bottom:1px solid var(--line);background:#f8f9fa;">
+              <div>
+                <h3 id="mk-sheet-heading" style="font-family:'Times New Roman',serif;font-size:17px;letter-spacing:0.3px;">PRACTICAL MARKS SHEET</h3>
+                <small class="muted">Tip: Use Arrow keys or Enter to navigate cells like Excel. Type <b>AB</b> for Absent. Auto-saves on edit.</small>
+              </div>
+              <div class="ctrl-row">
+                <button type="button" id="mk-save-btn" class="btn btn-primary small-btn">💾 Save sheet</button>
+                <button type="button" id="mk-export-btn" class="btn btn-outline small-btn">Export CSV ↓</button>
+                <button type="button" id="mk-clear-btn" class="btn btn-outline small-btn">Clear subject marks</button>
+              </div>
+            </div>
+            <div class="table-scroll mk-sheet-scroll">
+              <table class="mk-spreadsheet" id="mk-table">
+                <thead>
+                  <tr>
+                    <th class="mk-col-rno">R. No</th>
+                    <th class="mk-col-name">Name of Student</th>
+                    <th>EXPT 1</th>
+                    <th>EXPT 2</th>
+                    <th>EXPT 3</th>
+                    <th>EXPT 4</th>
+                    <th>EXPT 5</th>
+                    <th>EXPT 6</th>
+                    <th>EXPT 7</th>
+                    <th>EXPT 8</th>
+                    <th>EXPT 9</th>
+                    <th>EXPT 10</th>
+                    <th>FA 1</th>
+                    <th>FA 2</th>
+                    <th class="mk-col-avg">AVG</th>
+                  </tr>
+                </thead>
+                <tbody id="mk-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- STUDENT: MY MARKS SCORECARD -->
+          <div id="mk-student-wrap" class="panel table-panel" hidden>
+            <div class="table-tools" style="border-bottom:1px solid var(--line);">
+              <div>
+                <h3>My Subject-Wise Practical &amp; FA Scorecard</h3>
+                <small class="muted">Live marks published by faculty for your division.</small>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="mk-spreadsheet">
+                <thead>
+                  <tr>
+                    <th class="mk-col-name">Subject</th>
+                    <th>EXPT 1</th>
+                    <th>EXPT 2</th>
+                    <th>EXPT 3</th>
+                    <th>EXPT 4</th>
+                    <th>EXPT 5</th>
+                    <th>EXPT 6</th>
+                    <th>EXPT 7</th>
+                    <th>EXPT 8</th>
+                    <th>EXPT 9</th>
+                    <th>EXPT 10</th>
+                    <th>FA 1</th>
+                    <th>FA 2</th>
+                    <th class="mk-col-avg">AVG</th>
+                  </tr>
+                </thead>
+                <tbody id="mk-student-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <!-- ============ SYLLABUS ============ -->
+        <section id="syllabus-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">SYLLABUS</div><h2>Syllabus tracker 📘</h2><p>Break each subject into topics and tick them off as you go.</p></div></div>
+          <div id="sy-banner" class="lock-banner"></div>
+          <div id="sy-summary" class="sy-summary"></div>
+          <div class="panel">
+            <div class="panel-heading"><div><div class="eyebrow">TOPICS</div><h3>Subject topics</h3></div><div class="ctrl-row"><select id="sy-subject" class="ctrl" aria-label="Subject"></select><button type="button" id="sy-import" class="btn btn-outline small-btn">Import from faculty topics</button></div></div>
+            <form id="sy-form" class="event-form"><label for="sy-topic">Add topics (one per line)</label><textarea id="sy-topic" rows="3" placeholder="Unit 1: Arrays&#10;Unit 2: Linked lists"></textarea><button class="btn btn-primary small-btn" style="margin-top:12px">Add topics ＋</button></form>
+            <div id="sy-list" style="margin-top:17px"></div>
+          </div>
+        </section>
+
+        <!-- ============ TO-DO ============ -->
+        <section id="todo-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">STAY ORGANISED</div><h2>To-do list ✅</h2><p>Your personal tasks. Only you can see this list.</p></div><div class="filter-chip" id="td-count">0 to do</div></div>
+          <div class="panel">
+            <form id="td-form" class="event-form"><div class="form-two"><div><label for="td-text">New task</label><input id="td-text" placeholder="e.g. Finish DBMS assignment" required></div><div><label for="td-due">Due date (optional)</label><input id="td-due" type="date"></div></div><button class="btn btn-primary small-btn" style="margin-top:12px">Add task ＋</button></form>
+            <div class="table-tools" style="padding:17px 0 6px"><div class="filter-btns"><button type="button" data-td-filter="all" class="on">All</button><button type="button" data-td-filter="active">To do</button><button type="button" data-td-filter="done">Done</button></div><button type="button" id="td-clear" class="text-btn">Clear completed</button></div>
+            <div id="td-list"></div>
+          </div>
+        </section>
+
+        <!-- ============ DEADLINES ============ -->
+        <section id="deadlines-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">DON'T MISS IT</div><h2>Submission deadlines ⏰</h2><p>Assignments and submissions posted by faculty.</p></div></div>
+          <form id="dl-form" class="panel event-form" hidden><div class="panel-heading"><div><div class="eyebrow">NEW DEADLINE</div><h3>Post a deadline</h3></div><span class="form-icon">＋</span></div><div class="form-two"><div><label for="dl-title">Title</label><input id="dl-title" placeholder="e.g. OS lab journal" required></div><div><label for="dl-subject">Subject</label><select id="dl-subject"></select></div></div><div class="form-two"><div><label for="dl-due">Due date</label><input id="dl-due" type="date" required></div><div><label for="dl-notes">Notes (optional)</label><input id="dl-notes" placeholder="e.g. Submit in class"></div></div><button class="btn btn-primary full">Post deadline <span>↗</span></button></form>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">UPCOMING</div><h3>All deadlines</h3></div></div><div id="dl-list"></div></div>
+        </section>
+
+        <!-- ============ CALENDAR ============ -->
+        <section id="calendar-section" class="page-section" hidden>
+          <div class="page-intro"><div><div class="eyebrow">PLAN YOUR MONTH</div><h2>Combined calendar 📅</h2><p>Lectures, deadlines and events in one place. Click a day for details.</p></div></div>
+          <div class="panel"><div class="panel-heading"><div class="ctrl-row"><button type="button" id="cc-prev" class="btn btn-outline small-btn" aria-label="Previous month">‹</button><strong id="cc-title"></strong><button type="button" id="cc-next" class="btn btn-outline small-btn" aria-label="Next month">›</button></div><p class="hint"><span class="cal-key l"></span>lectures <span class="cal-key d"></span>deadlines <span class="cal-key e"></span>events</p></div><div id="cc-grid" class="cal-grid cc-grid"></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-heading"><div><div class="eyebrow">SELECTED DAY</div><h3 id="cc-day-title">Pick a day</h3></div></div><div id="cc-day"></div></div>
+        </section>
+      </div>
+
+      <footer class="app-footer"><span>CampusLoop <b>·</b> AICTE Activity Tracker</span><span>Small action, big impact. 🌱</span></footer>
+    </main>
+  </section>
+
+  <!-- Modals -->
+  <div id="announcement-modal" class="modal-backdrop" hidden><div class="modal-card"><button id="close-announcements" class="modal-close" aria-label="Close">×</button><div class="eyebrow">DON'T MISS OUT</div><h2>Campus announcements 📣</h2><p class="muted">Upcoming activities and opportunities, all in one place.</p><div id="modal-notices"></div><div id="modal-announcements" class="event-list"></div></div></div>
+  <div id="profile-modal" class="modal-backdrop" hidden><div class="modal-card"><button type="button" class="modal-close" data-close-profile aria-label="Close">×</button><div id="profile-body"></div></div></div>
+
+  <!-- Leave / OD Request Modal -->
+  <div id="od-modal" class="modal-backdrop" hidden>
+    <div class="modal-card">
+      <button type="button" id="close-od-modal" class="modal-close" aria-label="Close">×</button>
+      <div class="eyebrow">LEAVE APPLICATION</div>
+      <h2>Apply for Leave or On-Duty (OD)</h2>
+      <p class="muted">Approved OD/Medical leave will not count against your 75% attendance quota.</p>
+      <form id="od-form" class="event-form">
+        <label for="od-type">Application Type</label>
+        <select id="od-type" required>
+          <option value="OD">On-Duty (OD) - Hackathon / Sports / Seminar</option>
+          <option value="Medical">Medical Leave</option>
+          <option value="Personal">Approved Personal Leave</option>
+        </select>
+        <div class="form-two">
+          <div><label for="od-start">Start Date</label><input type="date" id="od-start" required></div>
+          <div><label for="od-end">End Date</label><input type="date" id="od-end" required></div>
+        </div>
+        <label for="od-reason">Reason</label>
+        <textarea id="od-reason" rows="2" placeholder="e.g. Representing college in Smart India Hackathon grand finale" required></textarea>
+        <label for="od-file">Supporting Letter / Certificate (Optional)</label>
+        <input type="file" id="od-file" accept="image/*,.pdf">
+        <button type="submit" class="btn btn-primary full">Submit Application ↗</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Attendance with Audit Trail Modal -->
+  <div id="audit-modal" class="modal-backdrop" hidden>
+    <div class="modal-card">
+      <button type="button" id="close-audit-modal" class="modal-close" aria-label="Close">×</button>
+      <div class="eyebrow">ATTENDANCE OVERRIDE</div>
+      <h2>Edit Past Attendance</h2>
+      <p class="muted">Provide an official reason for updating historical attendance records. An audit log will be created.</p>
+      <form id="audit-form" class="event-form">
+        <input type="hidden" id="audit-student-id">
+        <input type="hidden" id="audit-slot-id">
+        <input type="hidden" id="audit-date">
+        <p><strong>Student:</strong> <span id="audit-student-name"></span></p>
+        <p><strong>Lecture Date:</strong> <span id="audit-target-date"></span></p>
+        <label for="audit-status">New Status</label>
+        <select id="audit-status">
+          <option value="Attended">Present</option>
+          <option value="Bunked">Absent</option>
+          <option value="OD">On-Duty / Excused</option>
+        </select>
+        <label for="audit-reason-cat">Reason Category</label>
+        <select id="audit-reason-cat" required>
+          <option value="OD Sanctioned">On-Duty Sanctioned</option>
+          <option value="Medical Certificate">Medical Certificate Verified</option>
+          <option value="Technical Glitch">Scanner / Biometric Glitch</option>
+          <option value="Faculty Discretion">Faculty Discretion Override</option>
+        </select>
+        <label for="audit-notes">Audit Notes</label>
+        <textarea id="audit-notes" rows="2" placeholder="Reference approval letter, ticket number or rationale..." required></textarea>
+        <button type="submit" class="btn btn-primary full">Save with Audit Trail ↗</button>
+      </form>
+    </div>
+  </div>
+
+  <button id="theme-toggle" class="theme-fab" type="button" aria-label="Switch to dark mode">🌙</button>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
